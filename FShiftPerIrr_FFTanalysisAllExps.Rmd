@@ -76,7 +76,7 @@ t_baseline = c(-1000, 0)
 # CSD based normalized to pre-cue baseline in %
 # for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
 #  
-DATAPath = "data_in/FFT_Amp_data_largeclust_allsubs_08-29-2024_09-34.csv"
+DATAPath = "data_in/FFT_Amp_data_largeclust_allsubs_08-30-2024_11-21.csv"
 t_baseline = c(-1000, 0)
 
 
@@ -86,6 +86,29 @@ t_baseline = c(-1000, 0)
 #  
 # DATAPath = "data_in/FFT_Amp_data_pericenter_allsubs_07-02-2024_11-46.csv"
 # t_baseline = c(-1000, 0)
+# 
+# broad cluster | very broad central cluster
+# CSD based normalized to pre-cue baseline in %
+# for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
+# 
+DATAPath = "data_in/FFT_Amp_data_largecenterclust_allsubs_09-06-2024_15-09.csv"
+t_baseline = c(-1000, 0)
+
+
+# smaller cluster | smaller central cluster two elecs | peri only center
+# CSD based normalized to pre-cue baseline in %
+# for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
+#  
+# DATAPath = "data_in/FFT_Amp_data_smallclust_allsubs_09-04-2024_14-56.csv"
+# t_baseline = c(-1000, 0)
+
+# smaller cluster | smaller central cluster four elecs | peri only center
+# CSD based normalized to pre-cue baseline in %
+# for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
+#  
+# DATAPath = "data_in/FFT_Amp_data_smallclust_allsubs_09-06-2024_15-08.csv"
+# t_baseline = c(-1000, 0)
+
 
 
 options(scipen=1, digits=7)
@@ -109,14 +132,14 @@ margin-right: auto;
 <br>  
 
 ```{r load_data,results = "hide", fig.show = "hide", warning = FALSE}
-sub_sample = c(1:100)
-# sub_sample = as.factor(c(1,3,4, 7:9, 11:13, 16, 18)) # spatial attention monsters discarded
+sub_sample = c(0)
+# sub_sample = as.factor(c(26,30, 31,37, 38)) # no ssvep people discarded
 
 
 # read in data
 DataIn <- read.csv(DATAPath, sep = ";") %>%
   mutate(subjects = as.factor(subjects))%>%
-  filter(subjects %in% sub_sample)
+  filter(!subjects %in% sub_sample)
 head(DataIn)
 str(DataIn)
 ```
@@ -131,7 +154,7 @@ str(DataIn)
 dat2plot <- DataIn %>%
   filter(RDK_position2=="center") %>%
   group_by(subjects, time, RDK_isattended, RDK_colorlum)%>%
-  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked), subtraction_evoked=mean(subtraction_evoked))
 
 theme_set(theme_bw())
 ggplot(dat2plot, aes(x = interaction(time,RDK_isattended), y = amplitude_evoked, fill = RDK_isattended)) +
@@ -145,7 +168,7 @@ ggplot(dat2plot, aes(x = interaction(time,RDK_isattended), y = amplitude_evoked,
   scale_x_discrete("time windows in s", breaks=waiver(), labels = rep(c("[-1 0]","[0.5 1.5]","[1 2]"),1,6)) +
   facet_grid(.~RDK_colorlum)+
   theme(legend.position="bottom") +
-  ylab(expression(paste("amplitude in muV")))+
+  ylab(expression(paste("amplitude in muV/cm²")))+
   labs(title=sprintf("SSVEP amplitudes | evoked"),
        subtitle="collapsed across frequencies")+
   scale_fill_brewer(palette = "Dark2")+
@@ -165,6 +188,24 @@ ggplot(dat2plot, aes(x = interaction(time,RDK_isattended), y = modulation_evoked
   facet_grid(.~RDK_colorlum)+
   theme(legend.position="bottom") +
   ylab(expression(paste("modulation in %")))+
+  labs(title=sprintf("SSVEP amplitudes | evoked"),
+       subtitle="collapsed across frequencies")+
+  scale_fill_brewer(palette = "Dark2")+
+  scale_color_brewer(palette = "Dark2")
+
+theme_set(theme_bw())
+ggplot(dat2plot, aes(x = interaction(time,RDK_isattended), y = subtraction_evoked, fill = RDK_isattended)) +
+  # geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_line(aes(group = interaction(subjects,RDK_isattended)),colour = "grey60",alpha = 0.5,size =0.5) +
+  geom_beeswarm(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
+                    group = RDK_isattended), cex=2, size = 3,alpha=1,fill="grey40",shape=21)+
+  # geom_point(aes(color = condition, x = interaction(time,condition),
+  #                   group = condition), size = 4,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =RDK_isattended), geom='errorbar', width=0.9, size=1.5) +
+  scale_x_discrete("time windows in s", breaks=waiver(), labels = rep(c("[-1 0]","[0.5 1.5]","[1 2]"),1,6)) +
+  facet_grid(.~RDK_colorlum)+
+  theme(legend.position="bottom") +
+  ylab(expression(paste("amplitude diff in muV/cm²")))+
   labs(title=sprintf("SSVEP amplitudes | evoked"),
        subtitle="collapsed across frequencies")+
   scale_fill_brewer(palette = "Dark2")+
@@ -408,7 +449,7 @@ dat2plot <- DataIn %>%
 # set limits
 yax_limits <- c( min(dat2plot$modulation_evoked), max(dat2plot$modulation_evoked))
 yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
-yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.2
+# yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.2
 # yax_limits <- c(-27, 15)
 
 
@@ -551,7 +592,7 @@ dat2plot <- DataIn %>%
 # set general limits
 yax_limits <- c( min(dat2plot$modulation_evoked), max(dat2plot$modulation_evoked))
 yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
-yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.2
+# yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.2
 # yax_limits <- c(-27, 15)
 
 
