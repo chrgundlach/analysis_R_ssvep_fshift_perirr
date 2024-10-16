@@ -106,7 +106,8 @@ t_baseline = c(-1000, 0)
 # CSD based normalized to pre-cue baseline in %
 # for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
 # 
-DATAPath = "data_in/FFT_Amp_data_centerclustTangoStudy_allsubs_09-19-2024_13-40.csv"
+
+DATAPath = "data_in/FFT_Amp_data_centerclustTangoStudy_allsubs_10-16-2024_10-41.csv"
 t_baseline = c(-1000, 0)
 
 
