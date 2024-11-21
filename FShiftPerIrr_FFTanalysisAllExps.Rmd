@@ -95,20 +95,25 @@ DATAPath = "data_in/FFT_Amp_data_largecenterclust_allsubs_09-11-2024_14-45.csv"
 t_baseline = c(-1000, 0)
 
 
-# broad cluster | larger central cluster as in Tango study | 
+
+#!!!!!!! relevant
+# broad cluster | larger central cluster as in Tango study | peri both clusters
 # CSD based normalized to pre-cue baseline in %
 # for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
 #  
-# DATAPath = "data_in/FFT_Amp_data_pericenter_allsubs_07-02-2024_11-46.csv"
-# t_baseline = c(-1000, 0)
-# 
-# broad cluster | very broad central cluster
-# CSD based normalized to pre-cue baseline in %
-# for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
-# 
-
-DATAPath = "data_in/FFT_Amp_data_centerclustTangoStudy_allsubs_10-16-2024_10-41.csv"
+DATAPath = "data_in/FFT_Amp_data_TangoStudy_10-16-2024_10-41.csv"
 t_baseline = c(-1000, 0)
+
+# broad cluster | larger central cluster as in Tango study | peri only center
+# DATAPath = "data_in/FFT_Amp_data_TangoStudyPeriOnlyCenter_10-16-2024_11-08.csv"
+# t_baseline = c(-1000, 0)
+
+# # broad cluster | larger central cluster as in Tango study | peri only lateral
+DATAPath = "data_in/FFT_Amp_data_TangoStudyPeriOnlyLateral_10-16-2024_11-08.csv"
+t_baseline = c(-1000, 0)
+
+
+#!!!!!!!
 
 
 # smaller cluster | smaller central cluster two elecs | peri only center
@@ -150,6 +155,7 @@ margin-right: auto;
 ```{r load_data,results = "hide", fig.show = "hide", warning = FALSE}
 sub_sample = c(0)
 # sub_sample = as.factor(c(26,30, 31,37, 38)) # no ssvep people discarded
+sub_sample = as.factor(c(42)) # low trial number
 
 
 # read in data
