@@ -135,11 +135,13 @@ dat2plot <- merge(dat2plot,dat2plot1a) %>% # adjust for HR and FR of 0 or 1
     c = -0.5*(qnorm(Hitrate_adj1)+qnorm(FArate_adj1))
   )
 
+
 dat2plot2 <- DataIn2 %>%
   mutate(`FA_all`= FA + `FA_proper`)%>%
   # dplyr::select(-FA)%>%
   dplyr::select(-FA_all)%>%
-  pivot_longer(c(-subject ),names_to = "FA_type", values_to = "number")
+  pivot_longer(c(-subject ),names_to = "FA_type", values_to = "number")%>%
+  filter(FA_type=='FA_proper' | FA_type=='FA')
 
 theme_set(theme_bw())
 plot1 <- ggplot(dat2plot, aes(x = 1, y = RT_Mean)) +
@@ -351,397 +353,6 @@ savefig
 ```
 
 
-separate for color
-
-<br>  
-
-```{r plot_data_avg_color, results = "hide",  fig.height=5, fig.width=6, warning = FALSE}
-
-dat2plot <- DATA_Trials %>%
-  group_by(participant,eventcolor)%>%
-  summarise(
-    RT_Mean=mean(RT,na.rm=TRUE),
-    RT_STD=sd(RT,na.rm=TRUE),
-    Hitrate=(sum(response=='hit')/n())*100,
-    Hitrate_adj1 = ifelse((sum(response=='hit')/n())>0,
-                         min(c(sum(response=='hit')/n(), 1-(.5/n()))),
-                         .5/n()), # according to Stanislaw H, Todorov N, Behav Res Meth (1999) 31, 137-149, "1/2N rule" or
-    Hitrate_adj2 = (sum(response=='hit')+0.5)/(n()+1)) # loglinear approach (Hautus, 1995)
-dat2plot1a = DataIn1%>%
-  filter(eventtype=="distractor") %>%
-  group_by(participant,eventcolor)%>%
-  summarise(
-    FArate=(sum(response=='FA_proper')/n())*100,
-    FArate_adj1 = ifelse((sum(response=='FA_proper')/n())>0,
-                         min(c(sum(response=='FA_proper')/n(), 1-(.5/n()))),
-                         .5/n()), # according to Stanislaw H, Todorov N, Behav Res Meth (1999) 31, 137-149, "1/2N rule" or
-    FArate_adj2 = (sum(response=='FA_proper')+0.5)/(n()+1)) # loglinear approach (Hautus, 1995))
-dat2plot <- merge(dat2plot,dat2plot1a) %>% # adjust for HR and FR of 0 or 1
-  mutate(
-    d_prime = qnorm(Hitrate_adj1)-qnorm(FArate_adj1),
-    c = -0.5*(qnorm(Hitrate_adj1)+qnorm(FArate_adj1))
-  )
-
-
-theme_set(theme_bw())
-plot1 <- ggplot(dat2plot, aes(x = eventcolor, y = RT_Mean, fill = eventcolor)) +
-  # geom_hline(yintercept=0, show.legend = FALSE) +
-  geom_beeswarm(aes(color = eventcolor, x = eventcolor,
-                    group = eventcolor), cex=2.5, size = 5,alpha=0.4,shape=21)+
-  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =eventcolor), geom='errorbar', width=0.9, size=1.5) +
-  scale_fill_manual("attended color", values=c("darkblue", "darkgreen", "darkorange")) +
-  scale_color_manual("attended color", values=c("darkblue", "darkgreen", "darkorange")) +
-  ylab(expression(paste("reaction time in ms")))
-
-plot2 <- ggplot(dat2plot, aes(x = eventcolor, y = Hitrate, fill = eventcolor)) +
-  # geom_hline(yintercept=0, show.legend = FALSE) +
-  geom_beeswarm(aes(color = eventcolor, x = eventcolor,
-                    group = eventcolor), cex=2.5, size = 5,alpha=0.4,shape=21)+
-  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =eventcolor), geom='errorbar', width=0.9, size=1.5) +
-  scale_fill_manual("attended color", values=c("darkblue", "darkgreen", "darkorange")) +
-  scale_color_manual("attended color", values=c("darkblue", "darkgreen", "darkorange")) +
-  ylab(expression(paste("hit rate in %")))
-
-
-# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
-plotttitle <- ggdraw() + draw_label("behavioral measures separate by color", fontface='bold')
-plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(1,1))
-ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
-
-
-## for publication
-theme_set(theme_bw())
-plot1 <- ggplot(dat2plot, aes(x = eventcolor, y = RT_Mean, fill = eventcolor)) +
-  # geom_hline(yintercept=0, show.legend = FALSE) +
-  geom_beeswarm(aes(color = eventcolor, x = eventcolor,
-                    group = eventcolor), cex=3.5, size = 5,alpha=1,shape=21,fill="grey40")+
-  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =eventcolor), geom='errorbar', width=0.9, size=1.5) +
-  scale_fill_manual("attended color", values=c("darkblue", "darkgreen", "darkorange")) +
-  scale_color_manual("attended color", values=c("darkblue", "darkgreen", "darkorange")) +
-  ylab(expression(paste("reaction time in ms")))+
-  scale_y_continuous(limits=c(450, 800))
-
-
-plot1b <- ggplot(dat2plot, aes(y = RT_Mean, fill = eventcolor, x = 1)) +
-  geom_flat_violin(aes(fill = eventcolor),position = position_nudge(x = .1, y = 0), adjust = 1, trim = FALSE, alpha = 1, colour = NA)+
-  scale_fill_manual(values=c("darkblue", "darkgreen", "darkorange"))+
-  # scale_fill_brewer(palette = "Dark2")+
-  scale_color_manual(values=c("darkblue", "darkgreen", "darkorange"))+
-  # scale_color_brewer(palette = "Dark2")+
-  theme(axis.title.y=element_blank(),
-         axis.text.y=element_blank(),
-         axis.ticks.y=element_blank())+
-  theme(axis.title.x=element_blank(),
-         axis.text.x=element_blank(),
-         axis.ticks.x=element_blank())+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  scale_y_continuous(limits=c(450, 800))
-
-plot2 <- ggplot(dat2plot, aes(x = eventcolor, y = Hitrate, fill = eventcolor)) +
-  # geom_hline(yintercept=0, show.legend = FALSE) +
-  geom_beeswarm(aes(color = eventcolor, x = eventcolor,
-                    group = eventcolor), cex=3.5, size = 5,alpha=1,shape=21,fill="grey40")+
-  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =eventcolor), geom='errorbar', width=0.9, size=1.5) +
-  scale_fill_manual("attended color", values=c("darkblue", "darkgreen", "darkorange")) +
-  scale_color_manual("attended color", values=c("darkblue", "darkgreen", "darkorange")) +
-  ylab(expression(paste("hit rate in %")))+
-  scale_y_continuous(limits=c(10, 101))
-
-plot2b <- ggplot(dat2plot, aes(y = Hitrate, fill = eventcolor, x = 1)) +
-  geom_flat_violin(aes(fill = eventcolor),position = position_nudge(x = .1, y = 0), adjust = 1, trim = FALSE, alpha = 1, colour = NA)+
-  scale_fill_manual(values=c("darkblue", "darkgreen", "darkorange"))+
-  # scale_fill_brewer(palette = "Dark2")+
-  scale_color_manual(values=c("darkblue", "darkgreen", "darkorange"))+
-  # scale_color_brewer(palette = "Dark2")+
-  theme(axis.title.y=element_blank(),
-         axis.text.y=element_blank(),
-         axis.ticks.y=element_blank())+
-  theme(axis.title.x=element_blank(),
-         axis.text.x=element_blank(),
-         axis.ticks.x=element_blank())+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  scale_y_continuous(limits=c(10, 101))
-  
-
-# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
-plotttitle <- ggdraw() + draw_label("Behavioral measures by color", fontface='bold')
-plotplots <- ggarrange(plot1, plot1b, plot2, plot2b, ncol = 4,common.legend = TRUE,align = "h", widths=c(3,1,3,1))
-
-savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 6, height = 5, unit = "in")
-saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
-
-savefig %<>%
-  fill_panel(saveplot, column = 1, row = 1)
-savefig
-save_multi_panel_figure(savefig, "Behavior_by_color.eps")
-
-
-## for publication
-theme_set(theme_bw())
-plot1 <- ggplot(dat2plot, aes(x = eventcolor, y = RT_Mean, fill = eventcolor)) +
-  # geom_hline(yintercept=0, show.legend = FALSE) +
-  geom_beeswarm(aes(color = eventcolor, x = eventcolor,
-                    group = eventcolor), cex=3.5, size = 5,alpha=1,shape=21,fill="grey40")+
-  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =eventcolor), geom='errorbar', width=0.9, size=1.5) +
-  scale_fill_manual("attended color", values=c("darkblue", "darkgreen", "darkorange")) +
-  scale_color_manual("attended color", values=c("darkblue", "darkgreen", "darkorange")) +
-  ylab(expression(paste("reaction time in ms")))+
-  scale_y_continuous(limits=c(450, 800))
-
-
-plot1b <- ggplot(dat2plot, aes(y = RT_Mean, fill = eventcolor, x = 1)) +
-  geom_flat_violin(aes(fill = eventcolor),position = position_nudge(x = .1, y = 0), adjust = 1, trim = FALSE, alpha = 1, colour = NA)+
-  scale_fill_manual(values=c("darkblue", "darkgreen", "darkorange"))+
-  # scale_fill_brewer(palette = "Dark2")+
-  scale_color_manual(values=c("darkblue", "darkgreen", "darkorange"))+
-  # scale_color_brewer(palette = "Dark2")+
-  theme(axis.title.y=element_blank(),
-         axis.text.y=element_blank(),
-         axis.ticks.y=element_blank())+
-  theme(axis.title.x=element_blank(),
-         axis.text.x=element_blank(),
-         axis.ticks.x=element_blank())+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  scale_y_continuous(limits=c(450, 800))
-
-plot2 <- ggplot(dat2plot, aes(x = eventcolor, y = d_prime, fill = eventcolor)) +
-  # geom_hline(yintercept=0, show.legend = FALSE) +
-  geom_beeswarm(aes(color = eventcolor, x = eventcolor,
-                    group = eventcolor), cex=3.5, size = 5,alpha=1,shape=21,fill="grey40")+
-  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =eventcolor), geom='errorbar', width=0.9, size=1.5) +
-  scale_fill_manual("attended color", values=c("darkblue", "darkgreen", "darkorange")) +
-  scale_color_manual("attended color", values=c("darkblue", "darkgreen", "darkorange")) +
-  ylab(expression(paste("dprime")))+
-  scale_y_continuous(limits=c(0.8, 5))
-
-plot2b <- ggplot(dat2plot, aes(y = d_prime, fill = eventcolor, x = 1)) +
-  geom_flat_violin(aes(fill = eventcolor),position = position_nudge(x = .1, y = 0), adjust = 1, trim = FALSE, alpha = 1, colour = NA)+
-  scale_fill_manual(values=c("darkblue", "darkgreen", "darkorange"))+
-  # scale_fill_brewer(palette = "Dark2")+
-  scale_color_manual(values=c("darkblue", "darkgreen", "darkorange"))+
-  # scale_color_brewer(palette = "Dark2")+
-  theme(axis.title.y=element_blank(),
-         axis.text.y=element_blank(),
-         axis.ticks.y=element_blank())+
-  theme(axis.title.x=element_blank(),
-         axis.text.x=element_blank(),
-         axis.ticks.x=element_blank())+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  scale_y_continuous(limits=c(0.8, 5))
-  
-
-# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
-plotttitle <- ggdraw() + draw_label("Behavioral measures by color", fontface='bold')
-plotplots <- ggarrange(plot1, plot1b, plot2, plot2b, ncol = 4,common.legend = TRUE,align = "h", widths=c(3,1,3,1))
-
-savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 6, height = 5, unit = "in")
-saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
-
-savefig %<>%
-  fill_panel(saveplot, column = 1, row = 1)
-savefig
-save_multi_panel_figure(savefig, "RT_Dprime_by_color.eps")
-
-
-```
-
-separate for frequency
-
-<br>  
-
-```{r plot_data_avg_freq, results = "hide",  fig.height=5, fig.width=6, warning = FALSE}
-dat2plot <- DATA_Trials %>%
-  mutate(eventfrequency=as.factor(eventfrequency))%>%
-  group_by(participant,eventfrequency)%>%
-  summarise(
-    RT_Mean=mean(RT,na.rm=TRUE),
-    RT_STD=sd(RT,na.rm=TRUE),
-    Hitrate=(sum(response=='hit')/n())*100,
-    Hitrate_adj1 = ifelse((sum(response=='hit')/n())>0,
-                         min(c(sum(response=='hit')/n(), 1-(.5/n()))),
-                         .5/n()), # according to Stanislaw H, Todorov N, Behav Res Meth (1999) 31, 137-149, "1/2N rule" or
-    Hitrate_adj2 = (sum(response=='hit')+0.5)/(n()+1)) # loglinear approach (Hautus, 1995)
-dat2plot1a = DataIn1%>%
-  filter(eventtype=="distractor") %>%
-  mutate(eventfrequency=as.factor(eventfrequency))%>%
-  group_by(participant,eventfrequency)%>%
-  summarise(
-    FArate=(sum(response=='FA_proper')/n())*100,
-    FArate_adj1 = ifelse((sum(response=='FA_proper')/n())>0,
-                         min(c(sum(response=='FA_proper')/n(), 1-(.5/n()))),
-                         .5/n()), # according to Stanislaw H, Todorov N, Behav Res Meth (1999) 31, 137-149, "1/2N rule" or
-    FArate_adj2 = (sum(response=='FA_proper')+0.5)/(n()+1)) # loglinear approach (Hautus, 1995))
-dat2plot <- merge(dat2plot,dat2plot1a) %>% # adjust for HR and FR of 0 or 1
-  mutate(
-    d_prime = qnorm(Hitrate_adj1)-qnorm(FArate_adj1),
-    c = -0.5*(qnorm(Hitrate_adj1)+qnorm(FArate_adj1))
-  )
-
-theme_set(theme_bw())
-plot1 <- ggplot(dat2plot, aes(x = eventfrequency, y = RT_Mean, fill = eventfrequency)) +
-  # geom_hline(yintercept=0, show.legend = FALSE) +
-  geom_beeswarm(aes(color = eventfrequency, x = eventfrequency,
-                    group = eventfrequency), cex=2.5, size = 5,alpha=0.4,shape=21)+
-  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =eventfrequency), geom='errorbar', width=0.9, size=1.5) +
-  scale_fill_manual("attended frequency", values=c("#F1831A", "#293C4A", "#198A83")) +
-  scale_color_manual("attended frequency", values=c("#F1831A", "#293C4A", "#198A83")) +
-  ylab(expression(paste("reaction time in ms")))
-
-plot2 <- ggplot(dat2plot, aes(x = eventfrequency, y = Hitrate, fill = eventfrequency)) +
-  # geom_hline(yintercept=0, show.legend = FALSE) +
-  geom_beeswarm(aes(color = eventfrequency, x = eventfrequency,
-                    group = eventfrequency), cex=2.5, size = 5,alpha=0.4,shape=21)+
-  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =eventfrequency), geom='errorbar', width=0.9, size=1.5) +
-  scale_fill_manual("attended color", values=c("#F1831A", "#293C4A", "#198A83")) +
-  scale_color_manual("attended color", values=c("#F1831A", "#293C4A", "#198A83")) +
-  ylab(expression(paste("hit rate in %")))
-
-
-# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
-plotttitle <- ggdraw() + draw_label("behavioral measures by SSVEP-frequency", fontface='bold',size=12)
-plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(1,1))
-ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
-
-
-## for publication
-theme_set(theme_bw())
-plot1 <- ggplot(dat2plot, aes(x = eventfrequency, y = RT_Mean, fill = eventfrequency)) +
-  # geom_hline(yintercept=0, show.legend = FALSE) +
-  geom_beeswarm(aes(color = eventfrequency, x = eventfrequency,
-                    group = eventfrequency), cex=3.5, size = 5,alpha=1,shape=21,fill="grey40")+
-  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =eventfrequency), geom='errorbar', width=0.9, size=1.5) +
-  scale_fill_manual("attended color", values=c("#F1831A", "#293C4A", "#198A83")) +
-  scale_color_manual("attended color", values=c("#F1831A", "#293C4A", "#198A83")) +
-  ylab(expression(paste("reaction time in ms")))+
-  scale_y_continuous(limits=c(450, 800))
-
-
-plot1b <- ggplot(dat2plot, aes(y = RT_Mean, fill = eventfrequency, x = 1)) +
-  geom_flat_violin(aes(fill = eventfrequency),position = position_nudge(x = .1, y = 0), adjust = 1, trim = FALSE, alpha = 1, colour = NA)+
-  scale_fill_manual(values=c("#F1831A", "#293C4A", "#198A83"))+
-  # scale_fill_brewer(palette = "Dark2")+
-  scale_color_manual(values=c("#F1831A", "#293C4A", "#198A83"))+
-  # scale_color_brewer(palette = "Dark2")+
-  theme(axis.title.y=element_blank(),
-         axis.text.y=element_blank(),
-         axis.ticks.y=element_blank())+
-  theme(axis.title.x=element_blank(),
-         axis.text.x=element_blank(),
-         axis.ticks.x=element_blank())+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  scale_y_continuous(limits=c(450, 800))
-
-plot2 <- ggplot(dat2plot, aes(x = eventfrequency, y = Hitrate, fill = eventfrequency)) +
-  # geom_hline(yintercept=0, show.legend = FALSE) +
-  geom_beeswarm(aes(color = eventfrequency, x = eventfrequency,
-                    group = eventfrequency), cex=3.5, size = 5,alpha=1,shape=21,fill="grey40")+
-  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =eventfrequency), geom='errorbar', width=0.9, size=1.5) +
-  scale_fill_manual("attended color", values=c("#F1831A", "#293C4A", "#198A83")) +
-  scale_color_manual("attended color", values=c("#F1831A", "#293C4A", "#198A83")) +
-  ylab(expression(paste("hit rate in %")))+
-  scale_y_continuous(limits=c(10, 101))
-
-plot2b <- ggplot(dat2plot, aes(y = Hitrate, fill = eventfrequency, x = 1)) +
-  geom_flat_violin(aes(fill = eventfrequency),position = position_nudge(x = .1, y = 0), adjust = 1, trim = FALSE, alpha = 1, colour = NA)+
-  scale_fill_manual(values=c("#F1831A", "#293C4A", "#198A83"))+
-  # scale_fill_brewer(palette = "Dark2")+
-  scale_color_manual(values=c("#F1831A", "#293C4A", "#198A83"))+
-  # scale_color_brewer(palette = "Dark2")+
-  theme(axis.title.y=element_blank(),
-         axis.text.y=element_blank(),
-         axis.ticks.y=element_blank())+
-  theme(axis.title.x=element_blank(),
-         axis.text.x=element_blank(),
-         axis.ticks.x=element_blank())+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  scale_y_continuous(limits=c(10, 101))
-  
-
-# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
-plotttitle <- ggdraw() + draw_label("Behavioral measures by frequency", fontface='bold')
-plotplots <- ggarrange(plot1, plot1b, plot2, plot2b, ncol = 4,common.legend = TRUE,align = "h", widths=c(3,1,3,1))
-
-savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 6, height = 5, unit = "in")
-saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
-
-savefig %<>%
-  fill_panel(saveplot, column = 1, row = 1)
-savefig
-save_multi_panel_figure(savefig, "Behavior_by_freq.eps")
-
-## for publication
-theme_set(theme_bw())
-plot1 <- ggplot(dat2plot, aes(x = eventfrequency, y = RT_Mean, fill = eventfrequency)) +
-  # geom_hline(yintercept=0, show.legend = FALSE) +
-  geom_beeswarm(aes(color = eventfrequency, x = eventfrequency,
-                    group = eventfrequency), cex=3.5, size = 5,alpha=1,shape=21,fill="grey40")+
-  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =eventfrequency), geom='errorbar', width=0.9, size=1.5) +
-  scale_fill_manual("attended color", values=c("#F1831A", "#293C4A", "#198A83")) +
-  scale_color_manual("attended color", values=c("#F1831A", "#293C4A", "#198A83")) +
-  ylab(expression(paste("reaction time in ms")))+
-  scale_y_continuous(limits=c(450, 800))
-
-
-plot1b <- ggplot(dat2plot, aes(y = RT_Mean, fill = eventfrequency, x = 1)) +
-  geom_flat_violin(aes(fill = eventfrequency),position = position_nudge(x = .1, y = 0), adjust = 1, trim = FALSE, alpha = 1, colour = NA)+
-  scale_fill_manual(values=c("#F1831A", "#293C4A", "#198A83"))+
-  # scale_fill_brewer(palette = "Dark2")+
-  scale_color_manual(values=c("#F1831A", "#293C4A", "#198A83"))+
-  # scale_color_brewer(palette = "Dark2")+
-  theme(axis.title.y=element_blank(),
-         axis.text.y=element_blank(),
-         axis.ticks.y=element_blank())+
-  theme(axis.title.x=element_blank(),
-         axis.text.x=element_blank(),
-         axis.ticks.x=element_blank())+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  scale_y_continuous(limits=c(450, 800))
-
-plot2 <- ggplot(dat2plot, aes(x = eventfrequency, y = d_prime, fill = eventfrequency)) +
-  # geom_hline(yintercept=0, show.legend = FALSE) +
-  geom_beeswarm(aes(color = eventfrequency, x = eventfrequency,
-                    group = eventfrequency), cex=3.5, size = 5,alpha=1,shape=21,fill="grey40")+
-  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =eventfrequency), geom='errorbar', width=0.9, size=1.5) +
-  scale_fill_manual("attended color", values=c("#F1831A", "#293C4A", "#198A83")) +
-  scale_color_manual("attended color", values=c("#F1831A", "#293C4A", "#198A83")) +
-  ylab(expression(paste("hit rate in %")))+
-  scale_y_continuous(limits=c(0.8, 5))
-
-plot2b <- ggplot(dat2plot, aes(y = d_prime, fill = eventfrequency, x = 1)) +
-  geom_flat_violin(aes(fill = eventfrequency),position = position_nudge(x = .1, y = 0), adjust = 1, trim = FALSE, alpha = 1, colour = NA)+
-  scale_fill_manual(values=c("#F1831A", "#293C4A", "#198A83"))+
-  # scale_fill_brewer(palette = "Dark2")+
-  scale_color_manual(values=c("#F1831A", "#293C4A", "#198A83"))+
-  # scale_color_brewer(palette = "Dark2")+
-  theme(axis.title.y=element_blank(),
-         axis.text.y=element_blank(),
-         axis.ticks.y=element_blank())+
-  theme(axis.title.x=element_blank(),
-         axis.text.x=element_blank(),
-         axis.ticks.x=element_blank())+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  scale_y_continuous(limits=c(0.8, 5))
-  
-
-# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
-plotttitle <- ggdraw() + draw_label("Behavioral measures by frequency", fontface='bold')
-plotplots <- ggarrange(plot1, plot1b, plot2, plot2b, ncol = 4,common.legend = TRUE,align = "h", widths=c(3,1,3,1))
-
-savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 6, height = 5, unit = "in")
-saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
-
-savefig %<>%
-  fill_panel(saveplot, column = 1, row = 1)
-savefig
-save_multi_panel_figure(savefig, "RT_Dprime_by_freq.eps")
-
-
-  
-
-
-```
-
-
 ## Display behavioral data numerically
 
 <br>  
@@ -778,119 +389,8 @@ dat2plot  %>%
   group_by(colorlum)%>%
   summarise(N = n(), mean_RT = mean(RT_Mean), std_RT = sd(RT_Mean), mean_Hitrate = mean(Hitrate), std_Hitrate = sd(Hitrate),
             mean_FArate = mean(FArate), std_FArate = sd(FArate), mean_dprime = mean(d_prime), std_dprime = sd(d_prime)) %>%
-  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("descriptives of behavioral measures")) %>%
+  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3,3), caption = c("descriptives of behavioral measures")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
-
-
-
-###
-dat2plot <- DATA_Trials %>%
-  group_by(participant, colorlum, eventcolor)%>%
-  summarise(
-    RT_Mean=mean(RT,na.rm=TRUE),
-    RT_STD=sd(RT,na.rm=TRUE),
-    Hitrate=(sum(response=='hit')/n())*100,
-    Hitrate_adj1 = ifelse((sum(response=='hit')/n())>0,
-                         min(c(sum(response=='hit')/n(), 1-(.5/n()))),
-                         .5/n()), # according to Stanislaw H, Todorov N, Behav Res Meth (1999) 31, 137-149, "1/2N rule" or
-    Hitrate_adj2 = (sum(response=='hit')+0.5)/(n()+1)) # loglinear approach (Hautus, 1995)
-
-dat2plot1a = DataIn1%>%
-  filter(eventtype=="distractor") %>%
-  group_by(colorlum, participant, eventcolor)%>%
-  summarise(
-    FArate=(sum(response=='FA_proper')/n())*100,
-    FArate_adj1 = ifelse((sum(response=='FA_proper')/n())>0,
-                         min(c(sum(response=='FA_proper')/n(), 1-(.5/n()))),
-                         .5/n()), # according to Stanislaw H, Todorov N, Behav Res Meth (1999) 31, 137-149, "1/2N rule" or
-    FArate_adj2 = (sum(response=='FA_proper')+0.5)/(n()+1)) # loglinear approach (Hautus, 1995))
-dat2plot <- merge(dat2plot,dat2plot1a) %>% # adjust for HR and FR of 0 or 1
-  mutate(
-    d_prime = qnorm(Hitrate_adj1)-qnorm(FArate_adj1),
-    c = -0.5*(qnorm(Hitrate_adj1)+qnorm(FArate_adj1))
-  )
-
-dat2plot  %>%
-  group_by(colorlum, eventcolor)%>%
-  summarise(N = n(), mean_RT = mean(RT_Mean), std_RT = sd(RT_Mean), mean_Hitrate = mean(Hitrate), std_Hitrate = sd(Hitrate),
-            mean_FArate = mean(FArate), std_FArate = sd(FArate), mean_dprime = mean(d_prime), std_dprime = sd(d_prime)) %>%
-  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("descriptives of behavioral measures | separate for SSVEP colors")) %>%
-  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
-
-###
-dat2plot <- DATA_Trials %>%
-  mutate(eventfrequency=as.factor(eventfrequency))%>%
-  group_by(colorlum, participant, eventfrequency)%>%
-  summarise(
-    RT_Mean=mean(RT,na.rm=TRUE),
-    RT_STD=sd(RT,na.rm=TRUE),
-    Hitrate=(sum(response=='hit')/n())*100,
-    Hitrate_adj1 = ifelse((sum(response=='hit')/n())>0,
-                         min(c(sum(response=='hit')/n(), 1-(.5/n()))),
-                         .5/n()), # according to Stanislaw H, Todorov N, Behav Res Meth (1999) 31, 137-149, "1/2N rule" or
-    Hitrate_adj2 = (sum(response=='hit')+0.5)/(n()+1)) # loglinear approach (Hautus, 1995)
-
-dat2plot1a = DataIn1%>%
-  mutate(eventfrequency=as.factor(eventfrequency))%>%
-  filter(eventtype=="distractor") %>%
-  group_by(colorlum, participant, eventfrequency)%>%
-  summarise(
-    FArate=(sum(response=='FA_proper')/n())*100,
-    FArate_adj1 = ifelse((sum(response=='FA_proper')/n())>0,
-                         min(c(sum(response=='FA_proper')/n(), 1-(.5/n()))),
-                         .5/n()), # according to Stanislaw H, Todorov N, Behav Res Meth (1999) 31, 137-149, "1/2N rule" or
-    FArate_adj2 = (sum(response=='FA_proper')+0.5)/(n()+1)) # loglinear approach (Hautus, 1995))
-dat2plot <- merge(dat2plot,dat2plot1a) %>% # adjust for HR and FR of 0 or 1
-  mutate(
-    d_prime = qnorm(Hitrate_adj1)-qnorm(FArate_adj1),
-    c = -0.5*(qnorm(Hitrate_adj1)+qnorm(FArate_adj1))
-  )
-
-dat2plot  %>%
-  group_by(colorlum, eventfrequency)%>%
-  summarise(N = n(), mean_RT = mean(RT_Mean), std_RT = sd(RT_Mean), mean_Hitrate = mean(Hitrate), std_Hitrate = sd(Hitrate),
-            mean_FArate = mean(FArate), std_FArate = sd(FArate), mean_dprime = mean(d_prime), std_dprime = sd(d_prime)) %>%
-  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("descriptives of behavioral measures | separate for SSVEP frequencies")) %>%
-  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
-
-
-###
-dat2plot <- DATA_Trials %>%
-  mutate(eventfrequency=as.factor(eventfrequency))%>%
-  group_by(colorlum, participant, eventcolor, eventfrequency)%>%
-  summarise(
-    RT_Mean=mean(RT,na.rm=TRUE),
-    RT_STD=sd(RT,na.rm=TRUE),
-    Hitrate=(sum(response=='hit')/n())*100,
-    Hitrate_adj1 = ifelse((sum(response=='hit')/n())>0,
-                         min(c(sum(response=='hit')/n(), 1-(.5/n()))),
-                         .5/n()), # according to Stanislaw H, Todorov N, Behav Res Meth (1999) 31, 137-149, "1/2N rule" or
-    Hitrate_adj2 = (sum(response=='hit')+0.5)/(n()+1)) # loglinear approach (Hautus, 1995)
-
-dat2plot1a = DataIn1%>%
-  mutate(eventfrequency=as.factor(eventfrequency))%>%
-  filter(eventtype=="distractor") %>%
-  group_by(colorlum, participant, eventcolor, eventfrequency)%>%
-  summarise(
-    FArate=(sum(response=='FA_proper')/n())*100,
-    FArate_adj1 = ifelse((sum(response=='FA_proper')/n())>0,
-                         min(c(sum(response=='FA_proper')/n(), 1-(.5/n()))),
-                         .5/n()), # according to Stanislaw H, Todorov N, Behav Res Meth (1999) 31, 137-149, "1/2N rule" or
-    FArate_adj2 = (sum(response=='FA_proper')+0.5)/(n()+1)) # loglinear approach (Hautus, 1995))
-dat2plot <- merge(dat2plot,dat2plot1a) %>% # adjust for HR and FR of 0 or 1
-  mutate(
-    d_prime = qnorm(Hitrate_adj1)-qnorm(FArate_adj1),
-    c = -0.5*(qnorm(Hitrate_adj1)+qnorm(FArate_adj1))
-  )
-
-dat2plot  %>%
-  group_by(colorlum, eventcolor, eventfrequency)%>%
-  summarise(N = n(), mean_RT = mean(RT_Mean), std_RT = sd(RT_Mean), mean_Hitrate = mean(Hitrate), std_Hitrate = sd(Hitrate),
-            mean_FArate = mean(FArate), std_FArate = sd(FArate), mean_dprime = mean(d_prime), std_dprime = sd(d_prime)) %>%
-  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
-        caption = c("descriptives of behavioral measures | separate for SSVEP colors and frequencies")) %>%
-  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
-
 
 ```
 
@@ -1064,315 +564,284 @@ ggarrange(plotttitle, ggarrange(plot1, plot2, plot3, ncol = 3), ggarrange("", pl
 
 ## Statistical analysis
 
-### ~~ANOVA models~~ [don't work with our design]
+### ANOVA models
 ### linear mixed models
 
-#### test RT, Hitrate and dprime between colors and frequencies
+#### test RT, Hitrate and dprime between background luminance values
 
-**RT** ~ **color**
+**RT** ~ **luminance**
 
 <br> 
 
-```{r lme_RT_color, fig.show = "hide", warning = FALSE, fig.height=4, fig.width=10}
-# StatsOut <- DATA_Trials %>%
-#   group_by(participant,eventcolor)%>%
-#   summarise(RT_Mean=mean(RT,na.rm=TRUE),RT_STD=sd(RT,na.rm=TRUE),Hitrate=(sum(response=='hit')/n())*100,
-#             irr_color = unique(irr_color), irr_frequency = as.factor(unique(irr_frequency)))%>%
-#   aov_ez(id="participant", dv = "RT_Mean", data = ., within = c("eventcolor"), between = c("irr_color"),
-#          include_aov = afex_options("include_aov"))
-
-# define data first
-data1 <- DATA_Trials %>%
-  group_by(participant,eventcolor)%>%
-  summarise(RT_Mean=mean(RT,na.rm=TRUE),RT_STD=sd(RT,na.rm=TRUE),Hitrate=(sum(response=='hit')/n())*100,
-            irr_color = unique(irr_color), irr_frequency = as.factor(unique(irr_frequency)))
-
-data2 <- DataIn2 %>%
+```{r lme_RT_lum, fig.show = "hide", warning = FALSE, fig.height=4, fig.width=10}
+dat2plot2 <- DataIn2 %>%
   mutate(`FA_all`= FA + `FA_proper`)%>%
   # dplyr::select(-FA)%>%
   dplyr::select(-FA_all)%>%
-  rename(participant=subject)
-
-model_data <- merge(data1, data2)
-
-## model
-model_color <- lmerTest::lmer(RT_Mean ~ eventcolor + ( 1 | participant),
-                 data=model_data, REML=TRUE)
-model_estimation <- lmerTest::step(model_color, ddf="Kenward-Roger", reduce.random=FALSE)
-best_model <- get_model(model_estimation)
-
-# print model estimation
-model_estimation$fixed %>%
-  mutate(
-    `Pr(>F)` = cell_spec(ifelse(round(`Pr(>F)`,4)<.001,"< .001",round(`Pr(>F)`,4)), 
-                        color = ifelse(is.nan(`Pr(>F)`),"blue", ifelse(`Pr(>F)` < .05, "green", "red")),
-                        bold = ifelse(is.nan(`Pr(>F)`),F, ifelse(`Pr(>F)` < .05, T,F)),
-                        align = "center")) %>%
-  mutate(`eliminated factor` = rownames(model_estimation$fixed)) %>%
-  dplyr::select(colnames(.)[c(8,1:7)]) %>%
-  kable(escape = F, digits = c(3,3,3,3), 
-        caption = c(sprintf("fixed effects | stepwise elimination | best model: %s", 
-                            paste(as.character(unlist(best_model@call[[2]]))[c(2,1,3)],collapse='')))) %>%
-  kable_styling("striped", full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8),position = "left")
+  pivot_longer(c(-subject ),names_to = "FA_type", values_to = "number")%>%
+  filter(FA_type=='FA_proper' | FA_type=='FA')
 
 
-
-
-
-```
-
-
-**RT** ~ **frequency**
-
-<br> 
-
-```{r lme_RT_freq, fig.show = "hide", warning = FALSE, fig.height=4, fig.width=10}
-# define data first
-data1 <- DATA_Trials %>%
-  group_by(participant,eventfrequency)%>%
-  summarise(RT_Mean=mean(RT,na.rm=TRUE),RT_STD=sd(RT,na.rm=TRUE),Hitrate=(sum(response=='hit')/n())*100,
-            irr_color = unique(irr_color), irr_frequency = as.factor(unique(irr_frequency)))
-
-data2 <- DataIn2 %>%
-  mutate(`FA_all`= FA + `FA_proper`)%>%
-  # dplyr::select(-FA)%>%
-  dplyr::select(-FA_all)%>%
-  rename(participant=subject)
-
-model_data <- merge(data1, data2)%>%
-  mutate(eventfrequency = as.factor(eventfrequency))
-
-
-
-model_freq <- lmerTest::lmer(RT_Mean ~ eventfrequency + ( 1 | participant),
-                 data=model_data, REML=TRUE)
-model_estimation <- lmerTest::step(model_freq, ddf="Kenward-Roger", reduce.random=FALSE)
-best_model <- get_model(model_estimation)
-
-# print model estimation
-model_estimation$fixed %>%
-  mutate(
-    `Pr(>F)` = cell_spec(ifelse(round(`Pr(>F)`,4)<.001,"< .001",round(`Pr(>F)`,4)), 
-                        color = ifelse(is.nan(`Pr(>F)`),"blue", ifelse(`Pr(>F)` < .05, "green", "red")),
-                        bold = ifelse(is.nan(`Pr(>F)`),F, ifelse(`Pr(>F)` < .05, T,F)),
-                        align = "center")) %>%
-  mutate(`eliminated factor` = rownames(model_estimation$fixed)) %>%
-  dplyr::select(colnames(.)[c(8,1:7)]) %>%
-  kable(escape = F, digits = c(3,3,3,3), 
-        caption = c(sprintf("fixed effects | stepwise elimination | best model: %s", 
-                            paste(as.character(unlist(best_model@call[[2]]))[c(2,1,3)],collapse='')))) %>%
-  kable_styling("striped", full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8),position = "left")
-
-
-
-
-
-```
-
-
-**Hit rate** ~ **color**
-
-<br> 
-
-```{r lme_Hit_color, fig.show = "hide", warning = FALSE, fig.height=4, fig.width=10}
-# define data first
-data1 <- DATA_Trials %>%
-  group_by(participant,eventcolor)%>%
-  summarise(RT_Mean=mean(RT,na.rm=TRUE),RT_STD=sd(RT,na.rm=TRUE),Hitrate=(sum(response=='hit')/n())*100,
-            irr_color = unique(irr_color), irr_frequency = as.factor(unique(irr_frequency)))
-
-data2 <- DataIn2 %>%
-  mutate(`FA_all`= FA + `FA_proper`)%>%
-  # dplyr::select(-FA)%>%
-  dplyr::select(-FA_all)%>%
-  rename(participant=subject)
-
-model_data <- merge(data1, data2)
-
-model_color <- lmerTest::lmer(Hitrate ~ eventcolor + ( 1 | participant),
-                 data=model_data, REML=TRUE)
-model_estimation <- lmerTest::step(model_color, ddf="Kenward-Roger", reduce.random=FALSE)
-best_model <- get_model(model_estimation)
-
-# print model estimation
-model_estimation$fixed %>%
-  mutate(
-    `Pr(>F)` = cell_spec(ifelse(round(`Pr(>F)`,4)<.001,"< .001",round(`Pr(>F)`,4)), 
-                        color = ifelse(is.nan(`Pr(>F)`),"blue", ifelse(`Pr(>F)` < .05, "green", "red")),
-                        bold = ifelse(is.nan(`Pr(>F)`),F, ifelse(`Pr(>F)` < .05, T,F)),
-                        align = "center")) %>%
-  mutate(`eliminated factor` = rownames(model_estimation$fixed)) %>%
-  dplyr::select(colnames(.)[c(8,1:7)]) %>%
-  kable(escape = F, digits = c(3,3,3,3), 
-        caption = c(sprintf("fixed effects | stepwise elimination | best model: %s", 
-                            paste(as.character(unlist(best_model@call[[2]]))[c(2,1,3)],collapse='')))) %>%
-  kable_styling("striped", full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8),position = "left")
-
-
-
-
-
-```
-
-
-**Hit rate** ~ **frequency**
-
-<br> 
-
-```{r lme_Hit_freq, fig.show = "hide", warning = FALSE, fig.height=4, fig.width=10}
-# define data first
-data1 <- DATA_Trials %>%
-  group_by(participant,eventfrequency)%>%
-  summarise(RT_Mean=mean(RT,na.rm=TRUE),RT_STD=sd(RT,na.rm=TRUE),Hitrate=(sum(response=='hit')/n())*100,
-            irr_color = unique(irr_color), irr_frequency = as.factor(unique(irr_frequency)))
-
-data2 <- DataIn2 %>%
-  mutate(`FA_all`= FA + `FA_proper`)%>%
-  # dplyr::select(-FA)%>%
-  dplyr::select(-FA_all)%>%
-  rename(participant=subject)
-
-model_data <- merge(data1, data2)%>%
-  mutate(eventfrequency = as.factor(eventfrequency))
-
-model_freq <- lmerTest::lmer(Hitrate ~ eventfrequency + ( 1 | participant),
-                 data=model_data, REML=TRUE)
-model_estimation <- lmerTest::step(model_freq, ddf="Kenward-Roger", reduce.random=FALSE)
-best_model <- get_model(model_estimation)
-
-# print model estimation
-model_estimation$fixed %>%
-  mutate(
-    `Pr(>F)` = cell_spec(ifelse(round(`Pr(>F)`,4)<.001,"< .001",round(`Pr(>F)`,4)), 
-                        color = ifelse(is.nan(`Pr(>F)`),"blue", ifelse(`Pr(>F)` < .05, "green", "red")),
-                        bold = ifelse(is.nan(`Pr(>F)`),F, ifelse(`Pr(>F)` < .05, T,F)),
-                        align = "center")) %>%
-  mutate(`eliminated factor` = rownames(model_estimation$fixed)) %>%
-  dplyr::select(colnames(.)[c(8,1:7)]) %>%
-  kable(escape = F, digits = c(3,3,3,3), 
-        caption = c(sprintf("fixed effects | stepwise elimination | best model: %s", 
-                            paste(as.character(unlist(best_model@call[[2]]))[c(2,1,3)],collapse='')))) %>%
-  kable_styling("striped", full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8),position = "left")
-
-
-
-
-
-```
-
-
-
-**d prime** ~ **color**
-
-<br> 
-
-```{r lme_dprime_color, fig.show = "hide", warning = FALSE, fig.height=4, fig.width=10}
-# define data first
 dat2plot <- DATA_Trials %>%
-  group_by(participant,eventcolor)%>%
-  summarise(
-    RT_Mean=mean(RT,na.rm=TRUE),
-    RT_STD=sd(RT,na.rm=TRUE),
-    Hitrate=(sum(response=='hit')/n())*100,
-    Hitrate_adj1 = ifelse((sum(response=='hit')/n())>0,
-                         min(c(sum(response=='hit')/n(), 1-(.5/n()))),
-                         .5/n()), # according to Stanislaw H, Todorov N, Behav Res Meth (1999) 31, 137-149, "1/2N rule" or
-    Hitrate_adj2 = (sum(response=='hit')+0.5)/(n()+1)) # loglinear approach (Hautus, 1995)
-dat2plot1a = DataIn1%>%
-  filter(eventtype=="distractor") %>%
-  group_by(participant,eventcolor)%>%
-  summarise(
-    FArate=(sum(response=='FA_proper')/n())*100,
-    FArate_adj1 = ifelse((sum(response=='FA_proper')/n())>0,
-                         min(c(sum(response=='FA_proper')/n(), 1-(.5/n()))),
-                         .5/n()), # according to Stanislaw H, Todorov N, Behav Res Meth (1999) 31, 137-149, "1/2N rule" or
-    FArate_adj2 = (sum(response=='FA_proper')+0.5)/(n()+1)) # loglinear approach (Hautus, 1995))
-model_data <- merge(dat2plot,dat2plot1a) %>% # adjust for HR and FR of 0 or 1
+  group_by(participant,colorlum)%>%
+  summarise(RT_Mean=mean(RT,na.rm=TRUE),RT_STD=sd(RT,na.rm=TRUE),Hitrate=(sum(response=='hit')/n())*100)
+
+dat2plot2 <- DataIn2 %>%
+  mutate(`FA_all`= FA + `FA_proper`)%>%
+  # dplyr::select(-FA)%>%
+  dplyr::select(-FA_all)%>%
+  rename(participant=subject)
+
+dat2plot_all <- merge(dat2plot,dat2plot2) %>%
   mutate(
-    d_prime = qnorm(Hitrate_adj1)-qnorm(FArate_adj1),
-    c = -0.5*(qnorm(Hitrate_adj1)+qnorm(FArate_adj1))
+    d_prime = qnorm(Hitrate/100)-qnorm(FA_proper_rate),
+    c = -0.5*(qnorm(Hitrate/100)+qnorm(FA_proper_rate))
   )
 
 
-model_color <- lmerTest::lmer(d_prime ~ eventcolor + ( 1 | participant),
-                 data=model_data, REML=TRUE)
-model_estimation <- lmerTest::step(model_color, ddf="Kenward-Roger", reduce.random=FALSE)
-best_model <- get_model(model_estimation)
 
-# print model estimation
-model_estimation$fixed %>%
+# # statisticical analysis ANOVA
+# StatsOut <- dat2plot_all %>%
+#   aov_ez(id="participant", dv = "RT_Mean", data = ., between = c("colorlum"), include_aov = afex_options("include_aov"))
+# 
+# StatsOut%>%
+#   .$anova %>%
+#   mutate(factor = rownames(.))%>%
+#   mutate(
+#     `Pr(>F)` = cell_spec(ifelse(round(`Pr(>F)`,4)<.001,"< .001",round(`Pr(>F)`,4)),
+#                         color = ifelse(is.nan(`Pr(>F)`),"blue", ifelse(`Pr(>F)` < .05, "green", "red")),
+#                         bold = ifelse(is.nan(`Pr(>F)`),F, ifelse(`Pr(>F)` < .05, T,F)),
+#                         align = "center")
+#   ) %>%
+#   dplyr::select(`num Df`, `den Df`, MSE, `F`, ges, `Pr(>F)`) %>%
+#   kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("ANOVA | dv = RT in ms")) %>%
+#   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 6))
+
+
+# RT
+dat2plot_all %>%
+  nest() %>%
   mutate(
-    `Pr(>F)` = cell_spec(ifelse(round(`Pr(>F)`,4)<.001,"< .001",round(`Pr(>F)`,4)), 
-                        color = ifelse(is.nan(`Pr(>F)`),"blue", ifelse(`Pr(>F)` < .05, "green", "red")),
-                        bold = ifelse(is.nan(`Pr(>F)`),F, ifelse(`Pr(>F)` < .05, T,F)),
-                        align = "center")) %>%
-  mutate(`eliminated factor` = rownames(model_estimation$fixed)) %>%
-  dplyr::select(colnames(.)[c(8,1:7)]) %>%
-  kable(escape = F, digits = c(3,3,3,3), 
-        caption = c(sprintf("fixed effects | stepwise elimination | best model: %s", 
-                            paste(as.character(unlist(best_model@call[[2]]))[c(2,1,3)],collapse='')))) %>%
-  kable_styling("striped", full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8),position = "left")
-
-
-
-
-
+    stats = map(data, ~ broom::tidy(t.test(RT_Mean ~ colorlum, data = ., paired = FALSE))),
+    t_test_bf = map(data, ~ extractBF(ttestBF(formula = RT_Mean ~ colorlum, data = ., iterations = num.iter, rscale = 1))),
+    meanval = map(data, ~ .x %>%
+                    group_by(colorlum) %>%
+                    summarise(
+                      mean_RT_Mean = mean(RT_Mean, na.rm = TRUE),
+                      std_RT_Mean = sd(RT_Mean, na.rm = TRUE)
+                    ) %>%
+                    pivot_wider(names_from = colorlum, 
+                                values_from = c(mean_RT_Mean, std_RT_Mean), 
+                                names_sep = "_")
+    ),
+    cohens_d = map(data, ~ rstatix::cohens_d(RT_Mean ~ colorlum, data = ., paired = FALSE))
+  ) %>%
+  unnest(cols = c(stats, cohens_d, t_test_bf, meanval))%>%
+  mutate(BF10 = bf, BF01 = 1/bf, 
+         M_RT_iso = mean_RT_Mean_isolum__to_bckgrd,
+         SD_RT_iso = std_RT_Mean_isolum__to_bckgrd,
+         M_RT_off = mean_RT_Mean_offset_to_bckgrd,
+         SD_RT_off = std_RT_Mean_offset_to_bckgrd,
+         diff=estimate,
+         CohensD = effsize, t.value=statistic, df = parameter)%>%
+  dplyr::select(M_RT_iso, SD_RT_iso, M_RT_off, SD_RT_off, diff, t.value, df, p.value, CohensD, BF10, BF01)%>%
+  # mutate(p.value = p.adjust(p.value, method="holm")) %>% # none, holm
+  # mutate(p.value = p.adjust(p.value, method="none")) %>% # none, holm
+  ungroup()%>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "center")
+  ) %>%
+  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+        caption = c("RT | modulation by stimulus display group (isolum vs lum offset) | t-tests of difference")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 ```
 
-**d prime** ~ **frequency**
+**Hitrate** ~ **luminance**
 
 <br> 
 
-```{r lme_dprime_freq, fig.show = "hide", warning = FALSE, fig.height=4, fig.width=10}
-# define data first
-dat2plot <- DATA_Trials %>%
-  mutate(eventfrequency=as.factor(eventfrequency))%>%
-  group_by(participant,eventfrequency)%>%
-  summarise(
-    RT_Mean=mean(RT,na.rm=TRUE),
-    RT_STD=sd(RT,na.rm=TRUE),
-    Hitrate=(sum(response=='hit')/n())*100,
-    Hitrate_adj1 = ifelse((sum(response=='hit')/n())>0,
-                         min(c(sum(response=='hit')/n(), 1-(.5/n()))),
-                         .5/n()), # according to Stanislaw H, Todorov N, Behav Res Meth (1999) 31, 137-149, "1/2N rule" or
-    Hitrate_adj2 = (sum(response=='hit')+0.5)/(n()+1)) # loglinear approach (Hautus, 1995)
-dat2plot1a = DataIn1%>%
-  filter(eventtype=="distractor") %>%
-  mutate(eventfrequency=as.factor(eventfrequency))%>%
-  group_by(participant,eventfrequency)%>%
-  summarise(
-    FArate=(sum(response=='FA_proper')/n())*100,
-    FArate_adj1 = ifelse((sum(response=='FA_proper')/n())>0,
-                         min(c(sum(response=='FA_proper')/n(), 1-(.5/n()))),
-                         .5/n()), # according to Stanislaw H, Todorov N, Behav Res Meth (1999) 31, 137-149, "1/2N rule" or
-    FArate_adj2 = (sum(response=='FA_proper')+0.5)/(n()+1)) # loglinear approach (Hautus, 1995))
-model_data <- merge(dat2plot,dat2plot1a) %>% # adjust for HR and FR of 0 or 1
+```{r lme_HR_lum, fig.show = "hide", warning = FALSE, fig.height=4, fig.width=10}
+# Hitrate
+dat2plot_all %>%
+  nest() %>%
   mutate(
-    d_prime = qnorm(Hitrate_adj1)-qnorm(FArate_adj1),
-    c = -0.5*(qnorm(Hitrate_adj1)+qnorm(FArate_adj1))
-  )
-
-model_freq <- lmerTest::lmer(Hitrate ~ eventfrequency + ( 1 | participant),
-                 data=model_data, REML=TRUE)
-model_estimation <- lmerTest::step(model_freq, ddf="Kenward-Roger", reduce.random=FALSE)
-best_model <- get_model(model_estimation)
-
-# print model estimation
-model_estimation$fixed %>%
+    stats = map(data, ~ broom::tidy(t.test(Hitrate ~ colorlum, data = ., paired = FALSE))),
+    t_test_bf = map(data, ~ extractBF(ttestBF(formula = Hitrate ~ colorlum, data = ., iterations = num.iter, rscale = 1))),
+    meanval = map(data, ~ .x %>%
+                    group_by(colorlum) %>%
+                    summarise(
+                      mean_HR_Mean = mean(Hitrate, na.rm = TRUE),
+                      std_HR_Mean = sd(Hitrate, na.rm = TRUE)
+                    ) %>%
+                    pivot_wider(names_from = colorlum, 
+                                values_from = c(mean_HR_Mean, std_HR_Mean), 
+                                names_sep = "_")
+    ),
+    cohens_d = map(data, ~ rstatix::cohens_d(Hitrate ~ colorlum, data = ., paired = FALSE))
+  ) %>%
+  unnest(cols = c(stats, cohens_d, t_test_bf, meanval))%>%
+  mutate(BF10 = bf, BF01 = 1/bf, 
+         M_HR_iso = mean_HR_Mean_isolum__to_bckgrd,
+         SD_HR_iso = std_HR_Mean_isolum__to_bckgrd,
+         M_HR_off = mean_HR_Mean_offset_to_bckgrd,
+         SD_HR_off = std_HR_Mean_offset_to_bckgrd,
+         diff=estimate,
+         CohensD = effsize, t.value=statistic, df = parameter)%>%
+  dplyr::select(M_HR_iso, SD_HR_iso, M_HR_off, SD_HR_off, diff, t.value, df, p.value, CohensD, BF10, BF01)%>%
+  # mutate(p.value = p.adjust(p.value, method="holm")) %>% # none, holm
+  # mutate(p.value = p.adjust(p.value, method="none")) %>% # none, holm
+  ungroup()%>%
   mutate(
-    `Pr(>F)` = cell_spec(ifelse(round(`Pr(>F)`,4)<.001,"< .001",round(`Pr(>F)`,4)), 
-                        color = ifelse(is.nan(`Pr(>F)`),"blue", ifelse(`Pr(>F)` < .05, "green", "red")),
-                        bold = ifelse(is.nan(`Pr(>F)`),F, ifelse(`Pr(>F)` < .05, T,F)),
-                        align = "center")) %>%
-  mutate(`eliminated factor` = rownames(model_estimation$fixed)) %>%
-  dplyr::select(colnames(.)[c(8,1:7)]) %>%
-  kable(escape = F, digits = c(3,3,3,3), 
-        caption = c(sprintf("fixed effects | stepwise elimination | best model: %s", 
-                            paste(as.character(unlist(best_model@call[[2]]))[c(2,1,3)],collapse='')))) %>%
-  kable_styling("striped", full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8),position = "left")
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "center")
+  ) %>%
+  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+        caption = c("Hitrate | modulation by stimulus display group (isolum vs lum offset) | t-tests of difference")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+```
 
+**FArate** ~ **luminance**
 
+<br> 
 
+```{r lme_FAR_lum, fig.show = "hide", warning = FALSE, fig.height=4, fig.width=10}
+# FArate
+dat2plot_all %>%
+  nest() %>%
+  mutate(
+    stats = map(data, ~ broom::tidy(t.test(FA_proper_rate ~ colorlum, data = ., paired = FALSE))),
+    t_test_bf = map(data, ~ extractBF(ttestBF(formula = FA_proper_rate ~ colorlum, data = ., iterations = num.iter, rscale = 1))),
+    meanval = map(data, ~ .x %>%
+                    group_by(colorlum) %>%
+                    summarise(
+                      mean_FAR_Mean = mean(FA_proper_rate, na.rm = TRUE),
+                      std_FAR_Mean = sd(FA_proper_rate, na.rm = TRUE)
+                    ) %>%
+                    pivot_wider(names_from = colorlum, 
+                                values_from = c(mean_FAR_Mean, std_FAR_Mean), 
+                                names_sep = "_")
+    ),
+    cohens_d = map(data, ~ rstatix::cohens_d(FA_proper_rate ~ colorlum, data = ., paired = FALSE))
+  ) %>%
+  unnest(cols = c(stats, cohens_d, t_test_bf, meanval))%>%
+  mutate(BF10 = bf, BF01 = 1/bf, 
+         M_FAR_iso = mean_FAR_Mean_isolum__to_bckgrd,
+         SD_FAR_iso = std_FAR_Mean_isolum__to_bckgrd,
+         M_FAR_off = mean_FAR_Mean_offset_to_bckgrd,
+         SD_FAR_off = std_FAR_Mean_offset_to_bckgrd,
+         diff=estimate,
+         CohensD = effsize, t.value=statistic, df = parameter)%>%
+  dplyr::select(M_FAR_iso, SD_FAR_iso, M_FAR_off, SD_FAR_off, diff, t.value, df, p.value, CohensD, BF10, BF01)%>%
+  # mutate(p.value = p.adjust(p.value, method="holm")) %>% # none, holm
+  # mutate(p.value = p.adjust(p.value, method="none")) %>% # none, holm
+  ungroup()%>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "center")
+  ) %>%
+  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+        caption = c("FA-rate | modulation by stimulus display group (isolum vs lum offset) | t-tests of difference")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 
 
 ```
+
+**d-prime** ~ **luminance**
+
+<br> 
+
+```{r lme_dprime_lum, fig.show = "hide", warning = FALSE, fig.height=4, fig.width=10}
+# d-prime
+dat2plot_all %>%
+  nest() %>%
+  mutate(
+    stats = map(data, ~ broom::tidy(t.test(d_prime ~ colorlum, data = ., paired = FALSE))),
+    t_test_bf = map(data, ~ extractBF(ttestBF(formula = d_prime ~ colorlum, data = ., iterations = num.iter, rscale = 1))),
+    meanval = map(data, ~ .x %>%
+                    group_by(colorlum) %>%
+                    summarise(
+                      mean_d_Mean = mean(d_prime, na.rm = TRUE),
+                      std_d_Mean = sd(d_prime, na.rm = TRUE)
+                    ) %>%
+                    pivot_wider(names_from = colorlum, 
+                                values_from = c(mean_d_Mean, std_d_Mean), 
+                                names_sep = "_")
+    ),
+    cohens_d = map(data, ~ rstatix::cohens_d(d_prime ~ colorlum, data = ., paired = FALSE))
+  ) %>%
+  unnest(cols = c(stats, cohens_d, t_test_bf, meanval))%>%
+  mutate(BF10 = bf, BF01 = 1/bf, 
+         M_d_iso = mean_d_Mean_isolum__to_bckgrd,
+         SD_d_iso = std_d_Mean_isolum__to_bckgrd,
+         M_d_off = mean_d_Mean_offset_to_bckgrd,
+         SD_d_off = std_d_Mean_offset_to_bckgrd,
+         diff=estimate,
+         CohensD = effsize, t.value=statistic, df = parameter)%>%
+  dplyr::select(M_d_iso, SD_d_iso, M_d_off, SD_d_off, diff, t.value, df, p.value, CohensD, BF10, BF01)%>%
+  # mutate(p.value = p.adjust(p.value, method="holm")) %>% # none, holm
+  # mutate(p.value = p.adjust(p.value, method="none")) %>% # none, holm
+  ungroup()%>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "center")
+  ) %>%
+  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+        caption = c("d-prime | modulation by stimulus display group (isolum vs lum offset) | t-tests of difference")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+```
+
+**c criterion** ~ **luminance**
+
+<br> 
+
+```{r lme_c_lum, fig.show = "hide", warning = FALSE, fig.height=4, fig.width=10}
+# d-prime
+dat2plot_all %>%
+  nest() %>%
+  mutate(
+    stats = map(data, ~ broom::tidy(t.test(c ~ colorlum, data = ., paired = FALSE))),
+    t_test_bf = map(data, ~ extractBF(ttestBF(formula = c ~ colorlum, data = ., iterations = num.iter, rscale = 1))),
+    meanval = map(data, ~ .x %>%
+                    group_by(colorlum) %>%
+                    summarise(
+                      mean_c_Mean = mean(c, na.rm = TRUE),
+                      std_c_Mean = sd(c, na.rm = TRUE)
+                    ) %>%
+                    pivot_wider(names_from = colorlum,
+                                values_from = c(mean_c_Mean, std_c_Mean),
+                                names_sep = "_")
+    ),
+    cohens_d = map(data, ~ rstatix::cohens_d(c ~ colorlum, data = ., paired = FALSE))
+  ) %>%
+  unnest(cols = c(stats, cohens_d, t_test_bf, meanval))%>%
+  mutate(BF10 = bf, BF01 = 1/bf, 
+         M_c_iso = mean_c_Mean_isolum__to_bckgrd,
+         SD_c_iso = std_c_Mean_isolum__to_bckgrd,
+         M_c_off = mean_c_Mean_offset_to_bckgrd,
+         SD_c_off = std_c_Mean_offset_to_bckgrd,
+         diff=estimate,
+         CohensD = effsize, t.value=statistic, df = parameter)%>%
+  dplyr::select(M_c_iso, SD_c_iso, M_c_off, SD_c_off, diff, t.value, df, p.value, CohensD, BF10, BF01)%>%
+  # mutate(p.value = p.adjust(p.value, method="holm")) %>% # none, holm
+  # mutate(p.value = p.adjust(p.value, method="none")) %>% # none, holm
+  ungroup()%>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "center")
+  ) %>%
+  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+        caption = c("criterion | modulation by stimulus display group (isolum vs lum offset) | t-tests of difference")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+```
+
