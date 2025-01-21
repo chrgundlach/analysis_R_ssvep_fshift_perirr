@@ -100,16 +100,15 @@ t_baseline = c(-1000, 0)
 # broad cluster | larger central cluster as in Tango study | peri both clusters
 # CSD based normalized to pre-cue baseline in %
 # for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
-#  
-DATAPath = "data_in/FFT_Amp_data_TangoStudy_11-21-2024_13-53.csv"
+DATAPath = "data_in/FFT_Amp_data_TangoStudy_11-25-2024_14-17.csv"
 t_baseline = c(-1000, 0)
 
 # broad cluster | larger central cluster as in Tango study | peri only center
-# DATAPath = "data_in/FFT_Amp_data_TangoStudyPeriOnlyCenter_10-16-2024_11-08.csv"
+# DATAPath = "data_in/FFT_Amp_data_TangoStudyPeriOnlyCenter_11-25-2024_14-17.csv"
 # t_baseline = c(-1000, 0)
 
-# # broad cluster | larger central cluster as in Tango study | peri only lateral
-# DATAPath = "data_in/FFT_Amp_data_TangoStudyPeriOnlyLateral_10-16-2024_11-08.csv"
+# # broad cluster | larger central cluster as in Tango study | peri only lateral | in this study shows gain for attended
+# DATAPath = "data_in/FFT_Amp_data_TangoStudyPeriOnlyLateral_11-25-2024_14-17.csv"
 # t_baseline = c(-1000, 0)
 
 
@@ -460,7 +459,7 @@ plot2 <- ggplot(dat2plot, aes(y = subtraction_evoked, fill = RDK_isattended, x =
 
 # cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
 plotttitle <- ggdraw() + 
-  draw_label("SSVEP mod. | evoked \ncentral RDKs | isoluminant to background", fontface='bold', size = 10)
+  draw_label("SSVEP diff. | evoked \ncentral RDKs | isoluminant to background", fontface='bold', size = 10)
 plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
 
 savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3, height = 4, unit = "in")
@@ -946,7 +945,7 @@ plot2 <- ggplot(dat2plot, aes(y = subtraction_evoked, fill = RDK_isattended, x =
 
 # cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
 plotttitle <- ggdraw() + 
-  draw_label("SSVEP mod. | evoked \nperi RDKs | isoluminant to background", fontface='bold', size = 10)
+  draw_label("SSVEP diff. | evoked \nperi RDKs | isoluminant to background", fontface='bold', size = 10)
 plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
 
 savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3, height = 4, unit = "in")
@@ -966,7 +965,7 @@ plot all conditions
 <br>  
 
 
-```{r plot_data_st_peri_3, results = "hide",  fig.height=4, fig.width=6, warning = FALSE}
+```{r plot_data_st_peri_3, results = "hide",  fig.height=6, fig.width=6, warning = FALSE}
 
 #evoked raw#### for periphery
 dat2plot <- DataIn %>%
@@ -1032,7 +1031,7 @@ plotttitle <- ggdraw() +
   draw_label("SSVEP mod. | evoked \nperi RDKs | luminance offset", fontface='bold', size = 10)
 plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
 
-savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 6, height = 4, unit = "in")
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 6, height = 6, unit = "in")
 saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
 
 savefig %<>%
@@ -1090,7 +1089,7 @@ plotttitle <- ggdraw() +
   draw_label("SSVEP mod. | evoked \nperi RDKs | isoluminant to background", fontface='bold', size = 10)
 plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
 
-savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 6, height = 4, unit = "in")
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 6, height = 6, unit = "in")
 saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
 
 savefig %<>%
@@ -1157,7 +1156,7 @@ plotttitle <- ggdraw() +
   draw_label("SSVEP amp difference | evoked \nperi RDKs | luminance offset", fontface='bold', size = 10)
 plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
 
-savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 6, height = 4, unit = "in")
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 6, height = 6, unit = "in")
 saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
 
 savefig %<>%
@@ -1221,7 +1220,7 @@ plotttitle <- ggdraw() +
   draw_label("SSVEP amp difference | evoked \nperi RDKs | isoluminant to background", fontface='bold', size = 10)
 plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
 
-savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 6, height = 4, unit = "in")
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 6, height = 6, unit = "in")
 saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
 
 savefig %<>%
@@ -1258,7 +1257,7 @@ dat2plot %>%
     t.test(modulation_evoked ~ 1, data = .)
   ))) %>%
   mutate(
-    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$modulation_evoked, data = .,iterations=num.iter,rscale=1))})
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$modulation_evoked, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
   )%>%
   mutate(meanval = map(data, ~ mean(.x$modulation_evoked))) %>%
   mutate(std = map(data, ~ sd(.x$modulation_evoked))) %>%
@@ -1292,7 +1291,7 @@ dat2plot %>%
     t.test(attendedMINUSunattended ~ 1, data = .)
   ))) %>%
   mutate(
-    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$attendedMINUSunattended, data = .,iterations=num.iter,rscale=1))})
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$attendedMINUSunattended, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
   )%>%
   mutate(meanval = map(data, ~ mean(.x$attendedMINUSunattended))) %>%
   mutate(std = map(data, ~ sd(.x$attendedMINUSunattended))) %>%
@@ -1338,7 +1337,7 @@ dat2plot %>%
     t.test(subtraction_evoked ~ 1, data = .)
   ))) %>%
   mutate(
-    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$subtraction_evoked, data = .,iterations=num.iter,rscale=1))})
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$subtraction_evoked, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
   )%>%
   mutate(meanval = map(data, ~ mean(.x$subtraction_evoked))) %>%
   mutate(std = map(data, ~ sd(.x$subtraction_evoked))) %>%
@@ -1372,7 +1371,7 @@ dat2plot %>%
     t.test(attendedMINUSunattended ~ 1, data = .)
   ))) %>%
   mutate(
-    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$attendedMINUSunattended, data = .,iterations=num.iter,rscale=1))})
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$attendedMINUSunattended, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
   )%>%
   mutate(meanval = map(data, ~ mean(.x$attendedMINUSunattended))) %>%
   mutate(std = map(data, ~ sd(.x$attendedMINUSunattended))) %>%
@@ -1446,7 +1445,7 @@ dat2plot %>%
     t.test(modulation_evoked ~ 1, data = .)
   ))) %>%
   mutate(
-    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$modulation_evoked, data = .,iterations=num.iter,rscale=1))})
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$modulation_evoked, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
   )%>%
   mutate(meanval = map(data, ~ mean(.x$modulation_evoked))) %>%
   mutate(std = map(data, ~ sd(.x$modulation_evoked))) %>%
@@ -1483,7 +1482,7 @@ dat2plot %>%
     t.test(amplitude ~ 1, data = .)
   ))) %>%
   mutate(
-    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$amplitude, data = .,iterations=num.iter,rscale=1))})
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$amplitude, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
   )%>%
   mutate(meanval = map(data, ~ mean(.x$amplitude))) %>%
   mutate(std = map(data, ~ sd(.x$amplitude))) %>%
@@ -1552,7 +1551,7 @@ dat2plot %>%
     t.test(subtraction_evoked ~ 1, data = .)
   ))) %>%
   mutate(
-    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$subtraction_evoked, data = .,iterations=num.iter,rscale=1))})
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$subtraction_evoked, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
   )%>%
   mutate(meanval = map(data, ~ mean(.x$subtraction_evoked))) %>%
   mutate(std = map(data, ~ sd(.x$subtraction_evoked))) %>%
@@ -1589,7 +1588,7 @@ dat2plot %>%
     t.test(amplitude ~ 1, data = .)
   ))) %>%
   mutate(
-    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$amplitude, data = .,iterations=num.iter,rscale=1))})
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$amplitude, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
   )%>%
   mutate(meanval = map(data, ~ mean(.x$amplitude))) %>%
   mutate(std = map(data, ~ sd(.x$amplitude))) %>%
@@ -1667,7 +1666,7 @@ dat2plot %>%
     t.test(modulation_evoked ~ 1, data = .)
   ))) %>%
   mutate(
-    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$modulation_evoked, data = .,iterations=num.iter,rscale=1))})
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$modulation_evoked, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
   )%>%
   mutate(meanval = map(data, ~ mean(.x$modulation_evoked))) %>%
   mutate(std = map(data, ~ sd(.x$modulation_evoked))) %>%
@@ -1704,7 +1703,7 @@ dat2plot %>%
     t.test(amplitude ~ 1, data = .)
   ))) %>%
   mutate(
-    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$amplitude, data = .,iterations=num.iter,rscale=1))})
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$amplitude, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
   )%>%
   mutate(meanval = map(data, ~ mean(.x$amplitude))) %>%
   mutate(std = map(data, ~ sd(.x$amplitude))) %>%
@@ -1781,7 +1780,7 @@ dat2plot %>%
     t.test(subtraction_evoked ~ 1, data = .)
   ))) %>%
   mutate(
-    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$subtraction_evoked, data = .,iterations=num.iter,rscale=1))})
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$subtraction_evoked, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
   )%>%
   mutate(meanval = map(data, ~ mean(.x$subtraction_evoked))) %>%
   mutate(std = map(data, ~ sd(.x$subtraction_evoked))) %>%
@@ -1818,7 +1817,7 @@ dat2plot %>%
     t.test(amplitude ~ 1, data = .)
   ))) %>%
   mutate(
-    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$amplitude, data = .,iterations=num.iter,rscale=1))})
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$amplitude, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
   )%>%
   mutate(meanval = map(data, ~ mean(.x$amplitude))) %>%
   mutate(std = map(data, ~ sd(.x$amplitude))) %>%

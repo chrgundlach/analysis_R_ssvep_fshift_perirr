@@ -204,7 +204,7 @@ ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
 theme_set(theme_bw())
 plot1 <- ggplot(dat2plot, aes(x = colorlum, y = RT_Mean, color =colorlum,)) +
   # geom_hline(yintercept=0, show.legend = FALSE) +
-  geom_beeswarm(cex=4.5, size = 5,alpha=1)+
+  geom_beeswarm(cex=4.5, size = 5,alpha=0.4)+
   stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y..), geom='errorbar', width=0.9, size=1.5) +
   scale_fill_brewer(palette = "Dark2")+
   scale_color_brewer(palette = "Dark2")+
@@ -233,7 +233,7 @@ plot1b <- ggplot(dat2plot, aes(x = 1, y = RT_Mean, color =colorlum, fill = color
 
 plot2 <- ggplot(dat2plot, aes(x = colorlum, y = Hitrate, color =colorlum)) +
   # geom_hline(yintercept=0, show.legend = FALSE) +
-  geom_beeswarm(cex=4.5, size = 5,alpha=1)+
+  geom_beeswarm(cex=4.5, size = 5,alpha=0.4)+
   stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y..), geom='errorbar', width=0.9, size=1.5) +
   scale_fill_brewer(palette = "Dark2")+
   scale_color_brewer(palette = "Dark2")+
@@ -279,7 +279,7 @@ savefig
 theme_set(theme_bw())
 plot1 <- ggplot(dat2plot, aes(x = colorlum, y = RT_Mean, color =colorlum)) +
   # geom_hline(yintercept=0, show.legend = FALSE) +
-  geom_beeswarm(cex=4.5, size = 5,alpha=1)+
+  geom_beeswarm(cex=4.5, size = 5,alpha=0.4)+
   stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y..), geom='errorbar', width=0.9, size=1.5) +
   scale_fill_brewer(palette = "Dark2")+
   scale_color_brewer(palette = "Dark2")+
@@ -308,7 +308,7 @@ plot1b <- ggplot(dat2plot, aes(x = 1, y = RT_Mean, color =colorlum, fill = color
 
 plot2 <- ggplot(dat2plot, aes(x = colorlum, y = d_prime, color =colorlum)) +
   # geom_hline(yintercept=0, show.legend = FALSE) +
-  geom_beeswarm(cex=4.5, size = 5,alpha=1)+
+  geom_beeswarm(cex=4.5, size = 5,alpha=0.4)+
   stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y..), geom='errorbar', width=0.9, size=1.5) +
   scale_fill_brewer(palette = "Dark2")+
   scale_color_brewer(palette = "Dark2")+
@@ -399,13 +399,13 @@ dat2plot  %>%
 
 <br>  
 
-```{r corr1, results = "hide",  fig.height=3, fig.width=3, warning = FALSE}
+```{r corr1, results = "hide",  fig.height=3.5, fig.width=3, warning = FALSE}
 # def.cormethod ="pearson"
 def.cormethod ="spearman"
 num.iter = 10000
 
 dat2plot <- DATA_Trials %>%
-  group_by(participant)%>%
+  group_by(participant, colorlum)%>%
   summarise(
     RT_Mean=mean(RT,na.rm=TRUE),
     RT_STD=sd(RT,na.rm=TRUE),
@@ -416,7 +416,7 @@ dat2plot <- DATA_Trials %>%
     Hitrate_adj2 = (sum(response=='hit')+0.5)/(n()+1)) # loglinear approach (Hautus, 1995)
 dat2plot1a = DataIn1%>%
   filter(eventtype=="distractor") %>%
-  group_by(participant)%>%
+  group_by(participant, colorlum)%>%
   summarise(
     FArate=(sum(response=='FA_proper')/n())*100,
     FArate_adj1 = ifelse((sum(response=='FA_proper')/n())>0,
@@ -444,12 +444,49 @@ plot1<-ggscatter(corrdata, x = "x", y = "y",
 
 
 
-plotttitle <- ggdraw() + draw_label("Spearman Rank Correlations between behavioral measures", fontface='bold', size=12)
+plotttitle <- ggdraw() + draw_label("Spearman Rank Correlations\nall experiments", fontface='bold', size=12)
 ggarrange(plotttitle, plot1,nrow = 2, heights=c(0.2, 1))
 
+dat2plot_t <- dat2plot %>%
+  filter(colorlum=='offset_to_bckgrd')
+corrdata = data.frame(x=dat2plot_t$d_prime, y=dat2plot_t$RT_Mean)
 
-  
+corrRho1 = SpearmanRho(x = corrdata$x, y = corrdata$y, conf.level = .95)
+cbf1 = correlationBF(corrdata$x, corrdata$y, rscale = "medium",iterations=num.iter)
+plot1<-ggscatter(corrdata, x = "x", y = "y", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = def.cormethod, size = 3, alpha = 0.6,
+          add.params = list(fill = "lightgray"),
+          ggtheme = theme_classic(),
+          xlab = "dprime", ylab = "RT",
+          title = sprintf("Rho: %1.3f CI[%1.3f %1.3f]; BF: %1.3f",corrRho1[[1]],corrRho1[[2]],corrRho1[[3]],extractBF(cbf1)[[1]]))+
+  font("title", size = 8)
 
+
+
+plotttitle <- ggdraw() + draw_label("Spearman Rank Correlations\nluminance offset", fontface='bold', size=12)
+ggarrange(plotttitle, plot1,nrow = 2, heights=c(0.2, 1))
+
+# do the same analysis for the other conditions
+dat2plot_t <- dat2plot %>%
+  filter(colorlum=='isolum__to_bckgrd')
+corrdata = data.frame(x=dat2plot_t$d_prime, y=dat2plot_t$RT_Mean)
+
+corrRho1 = SpearmanRho(x = corrdata$x, y = corrdata$y, conf.level = .95)
+cbf1 = correlationBF(corrdata$x, corrdata$y, rscale = "medium",iterations=num.iter)
+plot1<-ggscatter(corrdata, x = "x", y = "y", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = def.cormethod, size = 3, alpha = 0.6,
+          add.params = list(fill = "lightgray"),
+          ggtheme = theme_classic(),
+          xlab = "dprime", ylab = "RT",
+          title = sprintf("Rho: %1.3f CI[%1.3f %1.3f]; BF: %1.3f",corrRho1[[1]],corrRho1[[2]],corrRho1[[3]],extractBF(cbf1)[[1]]))+
+  font("title", size = 8)
+
+
+
+plotttitle <- ggdraw() + draw_label("Spearman Rank Correlations\nisoluminant", fontface='bold', size=12)
+ggarrange(plotttitle, plot1,nrow = 2, heights=c(0.2, 1))
 
 ```
 
@@ -623,7 +660,7 @@ dat2plot_all %>%
   nest() %>%
   mutate(
     stats = map(data, ~ broom::tidy(t.test(RT_Mean ~ colorlum, data = ., paired = FALSE))),
-    t_test_bf = map(data, ~ extractBF(ttestBF(formula = RT_Mean ~ colorlum, data = ., iterations = num.iter, rscale = 1))),
+    t_test_bf = map(data, ~ extractBF(ttestBF(formula = RT_Mean ~ colorlum, data = ., iterations = num.iter, rscale = sqrt(2)/2))),
     meanval = map(data, ~ .x %>%
                     group_by(colorlum) %>%
                     summarise(
@@ -669,7 +706,7 @@ dat2plot_all %>%
   nest() %>%
   mutate(
     stats = map(data, ~ broom::tidy(t.test(Hitrate ~ colorlum, data = ., paired = FALSE))),
-    t_test_bf = map(data, ~ extractBF(ttestBF(formula = Hitrate ~ colorlum, data = ., iterations = num.iter, rscale = 1))),
+    t_test_bf = map(data, ~ extractBF(ttestBF(formula = Hitrate ~ colorlum, data = ., iterations = num.iter, rscale = sqrt(2)/2))),
     meanval = map(data, ~ .x %>%
                     group_by(colorlum) %>%
                     summarise(
@@ -715,7 +752,7 @@ dat2plot_all %>%
   nest() %>%
   mutate(
     stats = map(data, ~ broom::tidy(t.test(FA_proper_rate ~ colorlum, data = ., paired = FALSE))),
-    t_test_bf = map(data, ~ extractBF(ttestBF(formula = FA_proper_rate ~ colorlum, data = ., iterations = num.iter, rscale = 1))),
+    t_test_bf = map(data, ~ extractBF(ttestBF(formula = FA_proper_rate ~ colorlum, data = ., iterations = num.iter, rscale = sqrt(2)/2))),
     meanval = map(data, ~ .x %>%
                     group_by(colorlum) %>%
                     summarise(
@@ -763,7 +800,7 @@ dat2plot_all %>%
   nest() %>%
   mutate(
     stats = map(data, ~ broom::tidy(t.test(d_prime ~ colorlum, data = ., paired = FALSE))),
-    t_test_bf = map(data, ~ extractBF(ttestBF(formula = d_prime ~ colorlum, data = ., iterations = num.iter, rscale = 1))),
+    t_test_bf = map(data, ~ extractBF(ttestBF(formula = d_prime ~ colorlum, data = ., iterations = num.iter, rscale = sqrt(2)/2))),
     meanval = map(data, ~ .x %>%
                     group_by(colorlum) %>%
                     summarise(
@@ -809,7 +846,7 @@ dat2plot_all %>%
   nest() %>%
   mutate(
     stats = map(data, ~ broom::tidy(t.test(c ~ colorlum, data = ., paired = FALSE))),
-    t_test_bf = map(data, ~ extractBF(ttestBF(formula = c ~ colorlum, data = ., iterations = num.iter, rscale = 1))),
+    t_test_bf = map(data, ~ extractBF(ttestBF(formula = c ~ colorlum, data = ., iterations = num.iter, rscale = sqrt(2)/2))),
     meanval = map(data, ~ .x %>%
                     group_by(colorlum) %>%
                     summarise(
