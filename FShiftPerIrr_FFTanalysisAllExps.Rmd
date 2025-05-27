@@ -80,7 +80,8 @@ DATAPath = "data_in/FFT_Amp_data_largeclust_allsubs_08-30-2024_11-21.csv"
 t_baseline = c(-1000, 0)
 
 
-# broad cluster | larger central cluster | 
+# broad cluster | larger central cluster |
+# peri: not correct!
 # CSD based normalized to pre-cue baseline in %
 # for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
 #  
@@ -90,17 +91,17 @@ t_baseline = c(-1000, 0)
 # broad cluster | very broad central cluster
 # CSD based normalized to pre-cue baseline in %
 # for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
-# 
-DATAPath = "data_in/FFT_Amp_data_largecenterclust_allsubs_09-11-2024_14-45.csv"
-t_baseline = c(-1000, 0)
+# # 
+# DATAPath = "data_in/FFT_Amp_data_largecenterclust_allsubs_09-11-2024_14-45.csv"
+# t_baseline = c(-1000, 0)
 
 
 
 #!!!!!!! relevant
-# broad cluster | larger central cluster as in Tango study | peri both clusters
+# broad cluster | larger central cluster as in Tango study | peri both clusters but smaller
 # CSD based normalized to pre-cue baseline in %
 # for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
-DATAPath = "data_in/FFT_Amp_data_TangoStudy_11-25-2024_14-17.csv"
+DATAPath = "data_in/FFT_Amp_data_CenterTangoStudyPeriSmall_05-23-2025_11-56.csv"
 t_baseline = c(-1000, 0)
 
 # broad cluster | larger central cluster as in Tango study | peri only center
@@ -115,19 +116,13 @@ t_baseline = c(-1000, 0)
 #!!!!!!!
 
 
-# smaller cluster | smaller central cluster two elecs | peri only center
+# replication relevant
+# broad cluster | larger central cluster as in Tango study | peri both clusters as in Tango study
 # CSD based normalized to pre-cue baseline in %
 # for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
-#  
-# DATAPath = "data_in/FFT_Amp_data_smallclust_allsubs_09-04-2024_14-56.csv"
+# DATAPath = "data_in/FFT_Amp_data_TangoStudy_05-23-2025_11-53.csv"
 # t_baseline = c(-1000, 0)
 
-# smaller cluster | smaller central cluster four elecs | peri only center
-# CSD based normalized to pre-cue baseline in %
-# for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
-#  
-# DATAPath = "data_in/FFT_Amp_data_smallclust_allsubs_09-06-2024_15-08.csv"
-# t_baseline = c(-1000, 0)
 
 
 
@@ -238,7 +233,7 @@ plot differently
 
 <br>  
 
-```{r plot_data_st_center_2, results = "hide",  fig.height=4, fig.width=3, warning = FALSE}
+```{r plot_data_st_center_2, results = "hide",  fig.height=5, fig.width=3.5, warning = FALSE}
 #evoked raw#### for center
 
 # set overall limits?
@@ -250,7 +245,7 @@ dat2plot <- DataIn %>%
 # set limits
 yax_limits <- c( min(dat2plot$modulation_evoked), max(dat2plot$modulation_evoked))
 yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
-yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.2
+yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.1
 
 
 dat2plot <- DataIn %>%
@@ -315,7 +310,7 @@ plotttitle <- ggdraw() +
   draw_label("SSVEP mod. | evoked \ncentral RDKs | luminance offset", fontface='bold', size = 10)
 plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
 
-savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3, height = 4, unit = "in")
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3.5, height = 5, unit = "in")
 saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
 
 savefig %<>%
@@ -389,7 +384,7 @@ plotttitle <- ggdraw() +
   draw_label("SSVEP mod. | evoked \ncentral RDKs | isoluminant to background", fontface='bold', size = 10)
 plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
 
-savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3, height = 4, unit = "in")
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3.5, height = 5, unit = "in")
 saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
 
 savefig %<>%
@@ -462,7 +457,7 @@ plotttitle <- ggdraw() +
   draw_label("SSVEP diff. | evoked \ncentral RDKs | isoluminant to background", fontface='bold', size = 10)
 plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
 
-savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3, height = 4, unit = "in")
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3.5, height = 5, unit = "in")
 saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
 
 savefig %<>%
@@ -692,7 +687,7 @@ plot differently
 <br>  
 
 
-```{r plot_data_st_peri_2, results = "hide",  fig.height=4, fig.width=3, warning = FALSE}
+```{r plot_data_st_peri_2, results = "hide",  fig.height=5.5, fig.width=4, warning = FALSE}
 #evoked raw#### for periphery
 # general ylims
 dat2plot <- DataIn %>%
@@ -759,7 +754,7 @@ plotttitle <- ggdraw() +
   draw_label("SSVEP mod. | evoked \nperi RDKs | luminance offset", fontface='bold', size = 10)
 plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
 
-savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3, height = 4, unit = "in")
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 4, height = 5.5, unit = "in")
 saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
 
 savefig %<>%
@@ -818,7 +813,7 @@ plotttitle <- ggdraw() +
   draw_label("SSVEP mod. | evoked \nperi RDKs | isoluminant to background", fontface='bold', size = 10)
 plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
 
-savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3, height = 4, unit = "in")
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 4, height = 5.5, unit = "in")
 saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
 
 savefig %<>%
@@ -883,7 +878,7 @@ plotttitle <- ggdraw() +
   draw_label("SSVEP mod. | evoked \nperi RDKs | luminance offset", fontface='bold', size = 10)
 plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
 
-savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3, height = 4, unit = "in")
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 4, height = 5.5, unit = "in")
 saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
 
 savefig %<>%
@@ -948,7 +943,7 @@ plotttitle <- ggdraw() +
   draw_label("SSVEP diff. | evoked \nperi RDKs | isoluminant to background", fontface='bold', size = 10)
 plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
 
-savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3, height = 4, unit = "in")
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 4, height = 5.5, unit = "in")
 saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
 
 savefig %<>%
@@ -958,7 +953,7 @@ savefig
 
 ```
 
-### 2b  Illustrate Data as is | peri RDKs
+### 2c  Illustrate Data as is | peri RDKs
 
 plot all conditions
 
@@ -1230,7 +1225,163 @@ savefig
 
 ```
 
+
+### 2d  Illustrate Data as is | peri RDKs
+
+plot all conditions in combination they were actually presented
+
+<br>  
+
+
+```{r plot_data_st_peri_4, results = "hide",  fig.height=5, fig.width=8, warning = FALSE}
+
+#evoked raw#### for periphery
+dat2plot <- DataIn %>%
+  mutate(condition2 = case_when(
+    (condition == 1 | condition == 2) ~ "peri_att_unatt",
+    (condition == 3 | condition == 4) ~ "peri_att_irrel",
+    (condition == 5 | condition == 6) ~ "peri_unatt_irrel",
+  )) %>%
+  filter(RDK_position2=="peri") %>%
+  filter(RDK_ispresented=="presented")%>%
+  group_by(subjects, time, RDK_isattended, RDK_colorlum, condition2)%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
+  filter(time=='[0.5 1.5] ')
+
+
+dat2plot2 <- dat2plot %>%
+  filter(RDK_colorlum == 'offset_to_bckgrd')
+
+
+theme_set(theme_bw())
+ggplot(dat2plot2, aes(x = RDK_isattended, y = modulation_evoked, fill = RDK_isattended)) +
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_line(aes(group = interaction(subjects,time)),colour = "grey60",alpha = 1,size =0.5) +
+  geom_beeswarm(aes(color = RDK_isattended, x = RDK_isattended,
+                    group = RDK_isattended), cex=3, size = 5,alpha=1,fill="grey40",shape=21)+
+  # geom_point(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
+  #                   group = RDK_isattended), size = 4,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =RDK_isattended), geom='errorbar', width=0.9, size=1.5) +
+  scale_x_discrete("RDK_isattended", breaks=waiver(), labels = rep(c(""),1,3)) +
+  # theme(legend.position="bottom") +
+  facet_grid(.~condition2)+
+  ylab(expression(paste("amplitude mod in %")))+
+  scale_fill_manual(values=c("#F1831A", "#293C4A", "#198A83"))+
+  scale_color_manual(values=c("#F1831A", "#293C4A", "#198A83"))+
+  labs(title=sprintf("SSVEP modulations | evoked | peri RDKs | luminance offset"),
+       subtitle="collapsed across frequencies")
+  # scale_y_continuous(limits=c(-60, 140))
+
+dat2plot2 <- dat2plot %>%
+  filter(RDK_colorlum == 'isolum__to_bckgrd')
+
+
+theme_set(theme_bw())
+ggplot(dat2plot2, aes(x = RDK_isattended, y = modulation_evoked, fill = RDK_isattended)) +
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_line(aes(group = interaction(subjects,time)),colour = "grey60",alpha = 1,size =0.5) +
+  geom_beeswarm(aes(color = RDK_isattended, x = RDK_isattended,
+                    group = RDK_isattended), cex=3, size = 5,alpha=1,fill="grey40",shape=21)+
+  # geom_point(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
+  #                   group = RDK_isattended), size = 4,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =RDK_isattended), geom='errorbar', width=0.9, size=1.5) +
+  scale_x_discrete("RDK_isattended", breaks=waiver(), labels = rep(c(""),1,3)) +
+  # theme(legend.position="bottom") +
+  facet_grid(.~condition2)+
+  ylab(expression(paste("amplitude mod in %")))+
+  scale_fill_manual(values=c("#F1831A", "#293C4A", "#198A83"))+
+  scale_color_manual(values=c("#F1831A", "#293C4A", "#198A83"))+
+  labs(title=sprintf("SSVEP modulations | evoked | peri RDKs | isoluminant"),
+       subtitle="collapsed across frequencies")
+  # scale_y_continuous(limits=c(-60, 140))
+```
+
+
+### 3a  Illustrate Data as is | peri and center | general modulation
+
+plot differently
+
+<br>  
+
+```{r plot_data_peri_precue, results = "hide",  fig.height=5, fig.width=3.5, warning = FALSE}
+#evoked raw#### for center
+
+# set overall limits?
+dat2plot <- DataIn %>%
+  filter(RDK_ispresented=="presented", RDK_colorlum=="isolum__to_bckgrd")%>%
+  group_by(subjects, time, RDK_position2)%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
+  filter(time == '[0.5 1.5] ')
+# set limits
+yax_limits <- c( min(dat2plot$modulation_evoked), max(dat2plot$modulation_evoked))
+yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
+yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.1
+
+
+theme_set(theme_bw())
+plot1 <- ggplot(dat2plot, aes(x = RDK_position2, y = modulation_evoked, fill = RDK_position2)) +
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_line(aes(group = interaction(subjects,time)),colour = "grey60",alpha = 1,size =0.5) +
+  geom_beeswarm(aes(color = RDK_position2, x = RDK_position2,
+                    group = RDK_position2), cex=3, size = 5,alpha=1,fill="grey60",shape=21)+
+  # geom_point(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
+  #                   group = RDK_isattended), size = 4,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =RDK_position2), geom='errorbar', width=0.9, size=1.5) +
+  scale_x_discrete("RDK position", breaks=waiver(), labels = rep(c(""),1,2)) +
+  # theme(legend.position="bottom") +
+  ylab(expression(paste("amplitude modulation in %")))+
+  scale_fill_manual(values=c("seagreen", "plum4"))+
+  scale_color_manual(values=c("seagreen", "plum4"))+
+  #  scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(legend.position="none")+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+plot2 <- ggplot(dat2plot, aes(y = modulation_evoked, fill = RDK_position2, x = 1)) +
+  geom_flat_violin(aes(fill = RDK_position2),position = position_nudge(x = .1, y = 0), 
+                   adjust = 1.3, trim = FALSE, alpha = 1, colour = NA)+
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  # scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  scale_fill_manual(values=c("seagreen", "plum4"))+
+  scale_color_manual(values=c("seagreen", "plum4"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+
+# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
+plotttitle <- ggdraw() + 
+  draw_label("SSVEP mod. | evoked \nacross cons | isoluminat", fontface='bold', size = 10)
+plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
+
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3.5, height = 5, unit = "in")
+saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
+
+savefig %<>%
+  fill_panel(saveplot, column = 1, row = 1)
+savefig
+# save_multi_panel_figure(savefig, "figures/FFT_BeeSwarm_Mod_ALPHA_COL_34subs.eps")
+```
+
+
+
 ## Statistical analysis
+
+
 
 
 ### Central Stimuli
@@ -1729,6 +1880,7 @@ dat2plot %>%
 
 
 
+
 **amp diff** ~ **condition** 
 
 ANOVA_RM: modulation ~ CONDITION (
@@ -1837,6 +1989,347 @@ dat2plot %>%
                         align = "center")
   ) %>%
   kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("peripheral SSVEP | amp diff | contrasts")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+```
+
+
+#### analysis II [displayed differently]
+
+**modulation** ~ **condition** 
+
+ANOVA_RM: modulation ~ CONDITION (
+                                    attended + irrelevant
+                                    attended + not attended
+                                    irrelevant + attended
+                                    irrelevant + not attended
+                                    not attended + attended
+                                    not attended + irrelevant
+)
+
+- post-hoc t-test contrasting differences between defined levels
+- post-hoc t-test difference of post-cue modulation for attended vs unattended color
+
+<br> 
+
+```{r Stat perip stimuli IIb, message=FALSE, warning=FALSE, include=TRUE}
+dat2plot <- DataIn %>%
+  filter(RDK_position2=="peri") %>%
+  filter(RDK_ispresented=="presented")%>%
+  group_by(subjects, time, RDK_isattended2, RDK_colorlum)%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
+  filter(time == '[0.5 1.5] ')
+
+
+dat2plot2 <- DataIn %>%
+  mutate(condition2 = case_when(
+    (condition == 1 | condition == 2) ~ "peri_att_unatt",
+    (condition == 3 | condition == 4) ~ "peri_att_irrel",
+    (condition == 5 | condition == 6) ~ "peri_unatt_irrel",
+  )) %>%
+  filter(RDK_position2=="peri") %>%
+  filter(RDK_ispresented=="presented")%>%
+  group_by(subjects, time, RDK_isattended, RDK_colorlum, condition2)%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
+  filter(time=='[0.5 1.5] ')
+
+dat2plot %>%
+  group_by(RDK_colorlum, time)%>%
+  nest()%>%
+  mutate(stats= purrr::map(data, ~broom::tidy(
+    anova(aov_ez(id="subjects", dv = "modulation_evoked", data = ., within = "RDK_isattended2"))
+  ))) %>%
+  dplyr::select(-data) %>%
+  unnest()%>%
+  ungroup()%>%
+  mutate(
+    `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
+                        color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
+                        bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
+                        align = "center")
+  ) %>%
+  dplyr::select(RDK_colorlum, term, `num.Df`, `den.Df`, MSE, `statistic`, ges, `p.value`) %>%
+  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("repeated measures ANOVA for peripheral SSVEP amplitudes")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+
+dat2plot2 %>%
+  group_by(RDK_colorlum, condition2, RDK_isattended)%>%
+  nest()%>%
+  mutate(stats = map(data, ~broom::tidy(
+    t.test(modulation_evoked ~ 1, data = .)
+  ))) %>%
+  mutate(
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$modulation_evoked, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
+  )%>%
+  mutate(meanval = map(data, ~ mean(.x$modulation_evoked))) %>%
+  mutate(std = map(data, ~ sd(.x$modulation_evoked))) %>%
+  dplyr::select(-data) %>%
+  unnest(cols = c(stats, t_test_bf, meanval, std))%>%
+  mutate(BF10 = bf, BF01 = 1/bf)%>%
+  dplyr::select(RDK_colorlum,condition2, RDK_isattended, meanval, std,  statistic, parameter, p.value, BF10, BF01)%>%
+  mutate(p.value = p.adjust(p.value, method="holm")) %>% # none, holm
+  # mutate(p.value = p.adjust(p.value, method="none")) %>% # none, holm
+  ungroup()%>%
+  mutate(CohensD = `statistic`/sqrt(parameter +1))%>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "center")
+  ) %>%
+  arrange(RDK_colorlum,condition2,RDK_isattended)%>%
+  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+        caption = c("peripheral SSVEP | modulation | t-tests for modulation agains zero | Holm-corrected")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+
+dat2plot2 %>%
+  dplyr::select(-amplitude_evoked)%>%
+  pivot_wider(names_from = "RDK_isattended", values_from = "modulation_evoked")%>%
+  mutate(`attended-notattended` = `attended` -`not attended`, 
+         `attended-irrelevant` = `attended` -`irrelevant`,
+         `notattended-irrelevant` = `not attended` -`irrelevant`)%>%
+  dplyr::select(-c(`attended`:`not attended`))%>%
+  pivot_longer(cols=`attended-notattended`:`notattended-irrelevant`, names_to = "contrast", values_to = "amplitude")%>%
+  drop_na(amplitude)%>%
+  group_by(RDK_colorlum, condition2)%>%
+  nest()%>%
+  mutate(stats = map(data, ~broom::tidy(
+    t.test(amplitude ~ 1, data = .)
+  ))) %>%
+  mutate(
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$amplitude, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
+  )%>%
+  mutate(meanval = map(data, ~ mean(.x$amplitude))) %>%
+  mutate(std = map(data, ~ sd(.x$amplitude))) %>%
+  ungroup()%>%
+  dplyr::select(-data) %>%
+  unnest(cols = c(stats, t_test_bf, meanval, std))%>%
+  mutate(BF10 = bf, BF01 = 1/bf)%>%
+  dplyr::select(RDK_colorlum, condition2, meanval, std,  statistic, parameter, p.value, BF10, BF01)%>%
+  # mutate(p.value = p.adjust(p.value, method="holm")) %>% # none, holm
+  # mutate(p.value = p.adjust(p.value, method="none")) %>% # none, holm
+  ungroup()%>%
+  mutate(CohensD = `statistic`/sqrt(parameter +1))%>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "center")
+  ) %>%
+  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("peripheral SSVEP | modulation | contrasts")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+```
+
+
+## Some post-hoc add on analyses
+
+### General post cue amplitudes across all conditions
+
+
+**modulation** ~ **POSITION**
+
+<br> 
+
+```{r Stat post_cue all stimuli, message=FALSE, warning=FALSE, include=TRUE}
+dat2plot <- DataIn %>%
+  filter(RDK_ispresented=="presented")%>%
+  group_by(subjects, time, RDK_position2, RDK_colorlum)%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
+  filter(time == '[0.5 1.5] ')
+
+dat2plot %>%
+  group_by(RDK_position2, RDK_colorlum)%>%
+  nest()%>%
+  mutate(stats = map(data, ~broom::tidy(
+    t.test(modulation_evoked ~ 1, data = .)
+  ))) %>%
+  mutate(
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$modulation_evoked, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
+  )%>%
+  mutate(meanval = map(data, ~ mean(.x$modulation_evoked))) %>%
+  mutate(std = map(data, ~ sd(.x$modulation_evoked))) %>%
+  dplyr::select(-data) %>%
+  unnest(cols = c(stats, t_test_bf, meanval, std))%>%
+  mutate(BF10 = bf, BF01 = 1/bf)%>%
+  dplyr::select(RDK_colorlum, RDK_position2, meanval, std,  statistic, parameter, p.value, BF10, BF01)%>%
+  mutate(p.value = p.adjust(p.value, method="holm")) %>% # none, holm
+  # mutate(p.value = p.adjust(p.value, method="none")) %>% # none, holm
+  ungroup()%>%
+  mutate(CohensD = `statistic`/sqrt(parameter +1))%>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "center")
+  ) %>%
+  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+        caption = c("SSVEP | modulation | t-tests for modulation agains zero | Holm-corrected")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+
+dat2plot %>%
+  dplyr::select(-amplitude_evoked)%>%
+  pivot_wider(names_from = "RDK_position2", values_from = "modulation_evoked")%>%
+  mutate(centerMINUSperi = `center` -`peri`)%>%
+  group_by(time, RDK_colorlum)%>%
+  nest()%>%
+  mutate(stats = map(data, ~broom::tidy(
+    t.test(centerMINUSperi ~ 1, data = .)
+  ))) %>%
+  mutate(
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$centerMINUSperi, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
+  )%>%
+  mutate(meanval = map(data, ~ mean(.x$centerMINUSperi))) %>%
+  mutate(std = map(data, ~ sd(.x$centerMINUSperi))) %>%
+  ungroup()%>%
+  dplyr::select(-data, -time) %>%
+  unnest(cols = c(stats, t_test_bf, meanval, std))%>%
+  mutate(BF10 = bf, BF01 = 1/bf)%>%
+  dplyr::select(RDK_colorlum, meanval, std,  statistic, parameter, p.value, BF10, BF01)%>%
+  # mutate(p.value = p.adjust(p.value, method="holm")) %>% # none, holm
+  # mutate(p.value = p.adjust(p.value, method="none")) %>% # none, holm
+  ungroup()%>%
+  mutate(CohensD = `statistic`/sqrt(parameter +1))%>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "center")
+  ) %>%
+  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("SSVEP | modulation | center - peri ")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+```
+
+### analysis  [displayed differently] | pre-cue differences
+
+pre-cue differences?
+
+**amplitude** ~ **condition** 
+
+ANOVA_RM: amplitude ~ CONDITION (
+                                    attended + irrelevant
+                                    attended + not attended
+                                    irrelevant + attended
+                                    irrelevant + not attended
+                                    not attended + attended
+                                    not attended + irrelevant
+)
+
+- post-hoc t-test contrasting differences between defined levels
+- post-hoc t-test difference of post-cue modulation for attended vs unattended color
+
+<br> 
+
+```{r Stat perip stimuli IIb precue, message=FALSE, warning=FALSE, include=TRUE}
+dat2plot <- DataIn %>%
+  filter(RDK_position2=="peri") %>%
+  filter(RDK_ispresented=="presented")%>%
+  group_by(subjects, time, RDK_isattended2, RDK_colorlum)%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
+  filter(time == '[-1 0] ')
+
+dat2plot2 <- DataIn %>%
+  mutate(condition2 = case_when(
+    (condition == 1 | condition == 2) ~ "peri_att_unatt",
+    (condition == 3 | condition == 4) ~ "peri_att_irrel",
+    (condition == 5 | condition == 6) ~ "peri_unatt_irrel",
+  )) %>%
+  filter(RDK_position2=="peri") %>%
+  filter(RDK_ispresented=="presented")%>%
+  group_by(subjects, time, RDK_isattended, RDK_colorlum, condition2)%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
+  filter(time == '[-1 0] ')
+
+dat2plot %>%
+  group_by(RDK_colorlum, time)%>%
+  nest()%>%
+  mutate(stats= purrr::map(data, ~broom::tidy(
+    anova(aov_ez(id="subjects", dv = "amplitude_evoked", data = ., within = "RDK_isattended2"))
+  ))) %>%
+  dplyr::select(-data) %>%
+  unnest()%>%
+  ungroup()%>%
+  mutate(
+    `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
+                        color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
+                        bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
+                        align = "center")
+  ) %>%
+  dplyr::select(RDK_colorlum, term, `num.Df`, `den.Df`, MSE, `statistic`, ges, `p.value`) %>%
+  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("repeated measures ANOVA for peripheral SSVEP amplitudes")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+
+dat2plot2 %>%
+  group_by(RDK_colorlum, condition2, RDK_isattended)%>%
+  nest()%>%
+  mutate(stats = map(data, ~broom::tidy(
+    t.test(amplitude_evoked ~ 1, data = .)
+  ))) %>%
+  mutate(
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$amplitude_evoked, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
+  )%>%
+  mutate(meanval = map(data, ~ mean(.x$amplitude_evoked))) %>%
+  mutate(std = map(data, ~ sd(.x$amplitude_evoked))) %>%
+  dplyr::select(-data) %>%
+  unnest(cols = c(stats, t_test_bf, meanval, std))%>%
+  mutate(BF10 = bf, BF01 = 1/bf)%>%
+  dplyr::select(RDK_colorlum,condition2, RDK_isattended, meanval, std,  statistic, parameter, p.value, BF10, BF01)%>%
+  mutate(p.value = p.adjust(p.value, method="holm")) %>% # none, holm
+  # mutate(p.value = p.adjust(p.value, method="none")) %>% # none, holm
+  ungroup()%>%
+  mutate(CohensD = `statistic`/sqrt(parameter +1))%>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "center")
+  ) %>%
+  arrange(RDK_colorlum,condition2,RDK_isattended)%>%
+  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+        caption = c("peripheral SSVEP | modulation | t-tests for pre-cue amplitudes against zero | Holm-corrected")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+
+dat2plot2 %>%
+  dplyr::select(-modulation_evoked)%>%
+  pivot_wider(names_from = "RDK_isattended", values_from = "amplitude_evoked")%>%
+  mutate(`attended-notattended` = `attended` -`not attended`, 
+         `attended-irrelevant` = `attended` -`irrelevant`,
+         `notattended-irrelevant` = `not attended` -`irrelevant`)%>%
+  dplyr::select(-c(`attended`:`not attended`))%>%
+  pivot_longer(cols=`attended-notattended`:`notattended-irrelevant`, names_to = "contrast", values_to = "amplitude")%>%
+  drop_na(amplitude)%>%
+  group_by(RDK_colorlum, condition2)%>%
+  nest()%>%
+  mutate(stats = map(data, ~broom::tidy(
+    t.test(amplitude ~ 1, data = .)
+  ))) %>%
+  mutate(
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$amplitude, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
+  )%>%
+  mutate(meanval = map(data, ~ mean(.x$amplitude))) %>%
+  mutate(std = map(data, ~ sd(.x$amplitude))) %>%
+  ungroup()%>%
+  dplyr::select(-data) %>%
+  unnest(cols = c(stats, t_test_bf, meanval, std))%>%
+  mutate(BF10 = bf, BF01 = 1/bf)%>%
+  dplyr::select(RDK_colorlum, condition2, meanval, std,  statistic, parameter, p.value, BF10, BF01)%>%
+  # mutate(p.value = p.adjust(p.value, method="holm")) %>% # none, holm
+  # mutate(p.value = p.adjust(p.value, method="none")) %>% # none, holm
+  ungroup()%>%
+  mutate(CohensD = `statistic`/sqrt(parameter +1))%>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "center")
+  ) %>%
+  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("peripheral SSVEP | pre-cue amplitudes | contrasts")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 
 ```
