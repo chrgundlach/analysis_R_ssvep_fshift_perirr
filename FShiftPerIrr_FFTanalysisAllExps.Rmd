@@ -47,13 +47,13 @@ library(cowplot)
 library(ggpol)
 library(logspline)
 
-source('C:/Users/psy05cvd/Dropbox/work/R-statistics/general_functions/RainCloudPlots/tutorial_R/R_rainclouds.R')
-source('C:/Users/psy05cvd/Dropbox/work/R-statistics/general_functions/RainCloudPlots/tutorial_R/R_rainclouds.R')
+source('C:/Dropboxdata/Dropbox/work/R-statistics/general_functions/RainCloudPlots/tutorial_R/R_rainclouds.R')
+source('C:/Dropboxdata/Dropbox/work/R-statistics/general_functions/RainCloudPlots/tutorial_R/R_rainclouds.R')
 
-source('C:/Users/psy05cvd/Dropbox/work/R-statistics/examples/Bayesian_rank-based_hypothesis_testing/rankBasedCommonFunctions.R')
-source('C:/Users/psy05cvd/Dropbox/work/R-statistics/examples/Bayesian_rank-based_hypothesis_testing/rankSumSampler.R') # Wilcoxon rank sum function
-source('C:/Users/psy05cvd/Dropbox/work/R-statistics/examples/Bayesian_rank-based_hypothesis_testing/signRankSampler.R') # Wilcoxon signed-rank function
-source('C:/Users/psy05cvd/Dropbox/work/R-statistics/examples/Bayesian_rank-based_hypothesis_testing/spearmanSampler.R')# Spearman's rho function
+source('C:/Dropboxdata/Dropbox/work/R-statistics/examples/Bayesian_rank-based_hypothesis_testing/rankBasedCommonFunctions.R')
+source('C:/Dropboxdata/Dropbox/work/R-statistics/examples/Bayesian_rank-based_hypothesis_testing/rankSumSampler.R') # Wilcoxon rank sum function
+source('C:/Dropboxdata/Dropbox/work/R-statistics/examples/Bayesian_rank-based_hypothesis_testing/signRankSampler.R') # Wilcoxon signed-rank function
+source('C:/Dropboxdata/Dropbox/work/R-statistics/examples/Bayesian_rank-based_hypothesis_testing/spearmanSampler.R')# Spearman's rho function
 
 
 
@@ -458,6 +458,92 @@ plotttitle <- ggdraw() +
 plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
 
 savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3.5, height = 5, unit = "in")
+saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
+
+savefig %<>%
+  fill_panel(saveplot, column = 1, row = 1)
+savefig
+# save_multi_panel_figure(savefig, "figures/FFT_BeeSwarm_Mod_ALPHA_COL_34subs.eps")
+```
+### 1c  Illustrate Data as is | center RDKs separate for experimental conditions | only isoluminant
+
+plot differently
+
+<br>  
+
+```{r plot_data_st_center_2, results = "hide",  fig.height=5, fig.width=6, warning = FALSE}
+#evoked raw#### for center
+
+# set overall limits?
+dat2plot <- DataIn %>%
+  filter(RDK_position2=="center", RDK_colorlum=="isolum__to_bckgrd") %>%
+  mutate(condition_label = case_when(
+    condition %in% c(1,2) ~ "peri_AttUnatt",
+    condition %in% c(3,4) ~ "peri_AttIrrel",
+    condition %in% c(5,6) ~ "peri_UnattIrrel"
+  ))%>%
+  group_by(subjects, time, RDK_isattended, condition_label)%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
+  filter(time=='[0.5 1.5] ')
+# set limits
+yax_limits <- c( min(dat2plot$modulation_evoked), max(dat2plot$modulation_evoked))
+yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
+yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.1
+# # yax_limits <- c(-27, 15)
+
+theme_set(theme_bw())
+plot1 <- ggplot(dat2plot, aes(x = RDK_isattended, y = modulation_evoked, fill = RDK_isattended)) +
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_line(aes(group = interaction(subjects,time)),colour = "grey60",alpha = 1,size =0.5) +
+  geom_beeswarm(aes(color = RDK_isattended, x = RDK_isattended,
+                    group = RDK_isattended), cex=3, size = 5,alpha=1,fill="grey40",shape=21)+
+  # geom_point(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
+  #                   group = RDK_isattended), size = 4,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =RDK_isattended), geom='errorbar', width=0.9, size=1.5) +
+  scale_x_discrete("RDK_isattended", breaks=waiver(), labels = rep(c(""),1,2)) +
+  facet_grid(.~condition_label)+
+  # theme(legend.position="bottom") +
+  ylab(expression(paste("amplitude modulation in %")))+
+  scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
+  scale_color_manual(values=c("steelblue2", "#F03F3F"))+
+  #  scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(legend.position="none")+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+plot2 <- ggplot(dat2plot, aes(y = modulation_evoked, fill = RDK_isattended, x = 1)) +
+  geom_flat_violin(aes(fill = RDK_isattended),position = position_nudge(x = .1, y = 0), 
+                   adjust = 1.3, trim = FALSE, alpha = 1, colour = NA)+
+  facet_grid(.~condition_label)+
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  # scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
+  scale_color_manual(values=c("steelblue2", "#F03F3F"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+
+# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
+plotttitle <- ggdraw() + 
+  draw_label("SSVEP mod. | evoked \ncentral RDKs | luminance offset", fontface='bold', size = 10)
+plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
+
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 6, height = 5, unit = "in")
 saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
 
 savefig %<>%
