@@ -1,0 +1,502 @@
+---
+title: "ERP_analysis"
+author: "Christopher"
+date: "2 8 2025"
+output:
+  html_document:
+    code_folding: hide
+    toc: true
+    toc_float: true
+    toc_depth: 4
+    theme: flatly
+---
+
+Modelling of ~~raw~~ [*CSD based*] amplitude values from erp-based data
+via linear mixed models
+via standard anova models
+
+```{r load_package, message = FALSE, warning = FALSE}
+library(lme4)
+library(readxl)
+library(tidyverse)
+library(data.table)
+library(tidyverse)
+library(afex)
+library(broom)
+library(apa)
+library(kableExtra)
+library(lmerTest)
+library(pbkrtest)
+library(effects)
+library(visreg)
+library(sjPlot)
+library(broom.mixed)
+library(pander)
+library(mediation)
+library(multcomp)
+library(multcompView)
+library(magrittr)
+library(multipanelfigure)
+library(ggbeeswarm)
+library(lsmeans)
+library(BayesFactor)
+library(ggpubr)
+library(gpairs)
+library(DescTools)
+library(cowplot)
+library(ggpol)
+library(logspline)
+
+source('C:/Dropboxdata/Dropbox/work/R-statistics/general_functions/RainCloudPlots/tutorial_R/R_rainclouds.R')
+source('C:/Dropboxdata/Dropbox/work/R-statistics/general_functions/RainCloudPlots/tutorial_R/R_rainclouds.R')
+
+source('C:/Dropboxdata/Dropbox/work/R-statistics/examples/Bayesian_rank-based_hypothesis_testing/rankBasedCommonFunctions.R')
+source('C:/Dropboxdata/Dropbox/work/R-statistics/examples/Bayesian_rank-based_hypothesis_testing/rankSumSampler.R') # Wilcoxon rank sum function
+source('C:/Dropboxdata/Dropbox/work/R-statistics/examples/Bayesian_rank-based_hypothesis_testing/signRankSampler.R') # Wilcoxon signed-rank function
+source('C:/Dropboxdata/Dropbox/work/R-statistics/examples/Bayesian_rank-based_hypothesis_testing/spearmanSampler.R')# Spearman's rho function
+
+
+
+
+
+# multiple ERP files
+DATAPath = c("data_in/ERP_N2_ParietemporalLateral_230to380ms.csv",
+              "data_in/ERP_P300_centroparietal_450to650ms.csv")
+
+
+
+
+
+
+options(scipen=1, digits=7)
+```
+<style type="text/css">
+.main-container {
+max-width: 1800px !important;
+margin-left: auto;
+margin-right: auto;
+}
+</style>
+
+
+## Prepare data  
+<br>  
+
+1.  Read in data: 
++ `r DATAPath`
+
+
+<br>  
+
+```{r load_data,results = "hide", fig.show = "hide", warning = FALSE}
+sub_sample = c(0)
+# sub_sample = as.factor(c(26,30, 31,37, 38)) # no ssvep people discarded
+sub_sample = as.factor(c(42)) # low trial number
+
+DataIn <- DATAPath %>%
+  lapply(function(f) read.csv(f, sep = ";")) %>%
+  bind_rows()%>%
+  filter(!participant %in% sub_sample)%>%
+  mutate(participant=as.factor(participant))
+
+```
+## Illustrate ERP Data
+
+### 1  Illustrate Data as is | eventy by eventtype | N2 ERP
+
+<br>  
+
+```{r plot_data_ERP_N2, results = "hide",  fig.height=5, fig.width=5.5, warning = FALSE}
+#evoked raw#### for center
+
+# set overall limits?
+dat2plot <- DataIn %>%
+  filter(erpcomponent=="N2")
+# set limits
+yax_limits <- c( min(dat2plot$amplitude), max(dat2plot$amplitude))
+yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
+yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.1
+
+
+
+theme_set(theme_bw())
+plot1 <- ggplot(dat2plot, aes(x = interaction(eventtype,luminance), y = amplitude, fill = eventtype)) +
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_line(aes(group = interaction(participant,luminance)),colour = "grey60",alpha = 1,size =0.5) +
+  geom_beeswarm(aes(color = eventtype, x = interaction(eventtype,luminance),
+                    group = eventtype), cex=2, size = 5,alpha=1,fill="grey60",shape=21)+
+  # geom_point(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
+  #                   group = RDK_isattended), size = 4,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =eventtype), geom='errorbar', width=0.9, size=1.5) +
+  scale_x_discrete("eventtype", breaks=waiver(), labels = c("iso","iso","offset","offset")) +
+  # theme(legend.position="bottom") +
+  ylab(expression("amplitude in " * mu * "V/m²"))+
+  # scale_fill_manual(values=c("#005b8a", "#943826"))+
+  # scale_color_manual(values=c("#005b8a", "#943826"))+
+  scale_fill_manual(values=c("seagreen", "plum4"))+
+  scale_color_manual(values=c("seagreen", "plum4"))+
+  # scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
+  # scale_color_manual(values=c("steelblue2", "#F03F3F"))+
+  #  scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(legend.position="none")+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+plot2 <- ggplot(dat2plot, aes(y = amplitude, fill = eventtype, x = luminance)) +
+  geom_flat_violin(aes(fill = eventtype),
+                   position = position_nudge(x = 0, y = 0), 
+                   adjust = 1, trim = FALSE, alpha = 1, colour = NA)+
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  # scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
+  # scale_color_manual(values=c("steelblue2", "#F03F3F"))+
+  # scale_fill_manual(values=c("#005b8a", "#943826"))+
+  # scale_color_manual(values=c("#005b8a", "#943826"))+
+  scale_fill_manual(values=c("seagreen", "plum4"))+
+  scale_color_manual(values=c("seagreen", "plum4"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+  # theme(axis.title.x=element_blank(),
+  #       axis.text.x=element_blank(),
+  #       axis.ticks.x=element_blank())+
+  scale_x_discrete("eventtype", breaks=waiver(), labels = c("iso","offset")) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+
+# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
+plotttitle <- ggdraw() + 
+  draw_label("ERP amps for N2", fontface='bold', size = 10)
+plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
+
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 5.5, height = 5, unit = "in")
+saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
+
+savefig %<>%
+  fill_panel(saveplot, column = 1, row = 1)
+savefig
+# save_multi_panel_figure(savefig, "figures/FFT_BeeSwarm_Mod_ALPHA_COL_34subs.eps")
+
+
+
+
+
+```
+## Illustrate ERP Data
+
+### 2  Illustrate Data as is | eventy by eventtype | P300 ERP
+
+<br>  
+
+```{r plot_data_ERP_P300, results = "hide",  fig.height=5, fig.width=5.5, warning = FALSE}
+#evoked raw#### for center
+
+# set overall limits?
+dat2plot <- DataIn %>%
+  filter(erpcomponent=="P300")
+# set limits
+yax_limits <- c( min(dat2plot$amplitude), max(dat2plot$amplitude))
+yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
+yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.1
+
+
+
+theme_set(theme_bw())
+plot1 <- ggplot(dat2plot, aes(x = interaction(eventtype,luminance), y = amplitude, fill = eventtype)) +
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_line(aes(group = interaction(participant,luminance)),colour = "grey60",alpha = 1,size =0.5) +
+  geom_beeswarm(aes(color = eventtype, x = interaction(eventtype,luminance),
+                    group = eventtype), cex=2, size = 5,alpha=1,fill="grey60",shape=21)+
+  # geom_point(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
+  #                   group = RDK_isattended), size = 4,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =eventtype), geom='errorbar', width=0.9, size=1.5) +
+  scale_x_discrete("eventtype", breaks=waiver(), labels = c("iso","iso","offset","offset")) +
+  # theme(legend.position="bottom") +
+  ylab(expression("amplitude in " * mu * "V/m²"))+
+  # scale_fill_manual(values=c("#005b8a", "#943826"))+
+  # scale_color_manual(values=c("#005b8a", "#943826"))+
+  scale_fill_manual(values=c("seagreen", "plum4"))+
+  scale_color_manual(values=c("seagreen", "plum4"))+
+  # scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
+  # scale_color_manual(values=c("steelblue2", "#F03F3F"))+
+  #  scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(legend.position="none")+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+plot2 <- ggplot(dat2plot, aes(y = amplitude, fill = eventtype, x = luminance)) +
+  geom_flat_violin(aes(fill = eventtype),
+                   position = position_nudge(x = 0, y = 0), 
+                   adjust = 1, trim = FALSE, alpha = 1, colour = NA)+
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  # scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
+  # scale_color_manual(values=c("steelblue2", "#F03F3F"))+
+  # scale_fill_manual(values=c("#005b8a", "#943826"))+
+  # scale_color_manual(values=c("#005b8a", "#943826"))+
+  scale_fill_manual(values=c("seagreen", "plum4"))+
+  scale_color_manual(values=c("seagreen", "plum4"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+  # theme(axis.title.x=element_blank(),
+  #       axis.text.x=element_blank(),
+  #       axis.ticks.x=element_blank())+
+  scale_x_discrete("eventtype", breaks=waiver(), labels = c("iso","offset")) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+
+# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
+plotttitle <- ggdraw() + 
+  draw_label("ERP amps for P300", fontface='bold', size = 10)
+plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
+
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 5.5, height = 5, unit = "in")
+saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
+
+savefig %<>%
+  fill_panel(saveplot, column = 1, row = 1)
+savefig
+# save_multi_panel_figure(savefig, "figures/FFT_BeeSwarm_Mod_ALPHA_COL_34subs.eps")
+
+
+
+
+
+```
+
+
+## Statistical analysis
+
+
+
+### ERPs
+
+#### N2
+
+**amplitude** ~ **EVENT TYPE** x **COLOR LUMINANCE**
+
+- mixed design
+- t-test post-cue modulation against zero for target and distractor
+- t-test difference of post-cue modulation for target vs distractor
+
+<br> 
+
+```{r Stat_N2, message=FALSE, warning=FALSE, include=TRUE, fig.height=4, fig.width=4.5}
+dat2plot <- DataIn %>%
+  filter(erpcomponent=="N2")
+
+aovmodel1 <- dat2plot%>%
+  aov_ez(id="participant", dv = "amplitude", data = ., within = c("eventtype"), between = c("luminance"),
+         include_aov = afex_options("include_aov"))
+
+
+# display table anova effects
+aovmodel1 %>%
+  anova()%>%
+  tidy()%>%
+  mutate(
+    `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
+                        color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
+                        bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
+                        align = "center")
+  ) %>%
+  dplyr::select(term, `num.Df`, `den.Df`, MSE, `statistic`, ges, `p.value`) %>%
+  dplyr::rename(F=statistic)%>%
+  kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), caption = c("Mixed ANOVA  for N2")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+
+#display interaction
+emm_EVTYPEXLum <- as.data.frame(emmeans(aovmodel1, ~ eventtype*luminance))
+
+# RDK_isattended plot
+ggplot(emm_EVTYPEXLum, aes(x = luminance, y = emmean, fill = eventtype)) +
+  geom_col(position = position_dodge(), width = 0.6) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), 
+                position = position_dodge(width = 0.6),
+                width = 0.2) +
+  labs(title = "Eventtype × Luminance",
+       y = "Estimated Marginal Means (95% CI)", x = "Color Luminance") +
+  theme_minimal()+
+  scale_y_reverse()+
+  scale_fill_manual(values=c("seagreen", "plum4"))+
+  scale_color_manual(values=c("seagreen", "plum4"))
+  # scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
+  # scale_color_manual(values=c("steelblue2", "#F03F3F"))
+
+
+#create emmeans object/grid
+post_hocs.emmean <- emmeans(aovmodel1, c("eventtype","luminance")) # adjust = holm
+
+# report data for post_hocs.RDK_isattended
+post_hocs.emmean %>%
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+      caption = c("estimated marginal means | by eventtype X LUMINANCE | dv = N2")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+# 
+# # planned comparison
+# # test by specifying the levels levels(post_hocs.emmean) as.data.frame(post_hocs.emmean)
+# list.contrasts <- list(
+#   "iso att vs unatt"=c(1, -1, 0, 0),
+#   "offset att vs unatt"=c(0, 0, 1, -1),
+#   "att iso vs offset"=c(1,0,-1,0),
+#   "unatt iso vs offset"=c(0, 1, 0, -1)
+# )
+# 
+# 
+# 
+# post_hocs.emmean %>%
+#   contrast(method = list.contrasts,adjust = "FDR") %>%
+#   summary() %>%
+#   mutate(
+#     p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+#                         color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+#                         bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+#                         align = "left")
+#   ) %>%
+#   # mutate(CohensD = `t.ratio`/sqrt(df+1))%>%
+#   mutate(`CohensD` =
+#            summary(eff_size(contrast(post_hocs.emmean, method = list.contrasts,adjust = "FDR"),
+#                             sigma = sqrt(mean(sigma(aovmodel1$lm)^2)), # RMS of sigma()
+#                             edf = df.residual(aovmodel1$lm), method = "identity"))$effect.size,
+#          `lowCI` =
+#            summary(eff_size(contrast(post_hocs.emmean, method = list.contrasts,adjust = "FDR"),
+#                             sigma = sqrt(mean(sigma(aovmodel1$lm)^2)), # RMS of sigma()
+#                             edf = df.residual(aovmodel1$lm), method = "identity"))$lower.CL,
+#          `highCI` =
+#            summary(eff_size(contrast(post_hocs.emmean, method = list.contrasts,adjust = "FDR"),
+#                             sigma = sqrt(mean(sigma(aovmodel1$lm)^2)), # RMS of sigma()
+#                             edf = df.residual(aovmodel1$lm), method = "identity"))$upper.CL
+#   )%>%
+#   kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+#         caption = c("estimated contrasts | by ATTENTION X LUMINANCE | dv = central SSVEP modulation | corrected: FDR")) %>%
+#   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+```
+<br> 
+
+#### P300
+
+**amplitude** ~ **EVENT TYPE** x **COLOR LUMINANCE**
+
+- mixed design
+- t-test post-cue modulation against zero for target and distractor
+- t-test difference of post-cue modulation for target vs distractor
+
+<br> 
+
+```{r Stat_P300, message=FALSE, warning=FALSE, include=TRUE, fig.height=4, fig.width=4.5}
+dat2plot <- DataIn %>%
+  filter(erpcomponent=="P300")
+
+aovmodel1 <- dat2plot%>%
+  aov_ez(id="participant", dv = "amplitude", data = ., within = c("eventtype"), between = c("luminance"),
+         include_aov = afex_options("include_aov"))
+
+
+# display table anova effects
+aovmodel1 %>%
+  anova()%>%
+  tidy()%>%
+  mutate(
+    `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
+                        color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
+                        bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
+                        align = "center")
+  ) %>%
+  dplyr::select(term, `num.Df`, `den.Df`, MSE, `statistic`, ges, `p.value`) %>%
+  dplyr::rename(F=statistic)%>%
+  kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), caption = c("Mixed ANOVA for P300")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+
+#display interaction
+emm_EVTYPEXLum <- as.data.frame(emmeans(aovmodel1, ~ eventtype*luminance))
+
+# RDK_isattended plot
+ggplot(emm_EVTYPEXLum, aes(x = luminance, y = emmean, fill = eventtype)) +
+  geom_col(position = position_dodge(), width = 0.6) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), 
+                position = position_dodge(width = 0.6),
+                width = 0.2) +
+  labs(title = "Eventtype × Luminance",
+       y = "Estimated Marginal Means (95% CI)", x = "Color Luminance") +
+  theme_minimal()+
+  scale_y_reverse()+
+  scale_fill_manual(values=c("seagreen", "plum4"))+
+  scale_color_manual(values=c("seagreen", "plum4"))
+  # scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
+  # scale_color_manual(values=c("steelblue2", "#F03F3F"))
+
+
+#create emmeans object/grid
+post_hocs.emmean <- emmeans(aovmodel1, c("eventtype","luminance")) # adjust = holm
+
+# report data for post_hocs.RDK_isattended
+post_hocs.emmean %>%
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+      caption = c("estimated marginal means | by eventtype X LUMINANCE | dv = P300")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+# 
+# # planned comparison
+# # test by specifying the levels levels(post_hocs.emmean) as.data.frame(post_hocs.emmean)
+# list.contrasts <- list(
+#   "iso att vs unatt"=c(1, -1, 0, 0),
+#   "offset att vs unatt"=c(0, 0, 1, -1),
+#   "att iso vs offset"=c(1,0,-1,0),
+#   "unatt iso vs offset"=c(0, 1, 0, -1)
+# )
+# 
+# 
+# 
+# post_hocs.emmean %>%
+#   contrast(method = list.contrasts,adjust = "FDR") %>%
+#   summary() %>%
+#   mutate(
+#     p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+#                         color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+#                         bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+#                         align = "left")
+#   ) %>%
+#   # mutate(CohensD = `t.ratio`/sqrt(df+1))%>%
+#   mutate(`CohensD` =
+#            summary(eff_size(contrast(post_hocs.emmean, method = list.contrasts,adjust = "FDR"),
+#                             sigma = sqrt(mean(sigma(aovmodel1$lm)^2)), # RMS of sigma()
+#                             edf = df.residual(aovmodel1$lm), method = "identity"))$effect.size,
+#          `lowCI` =
+#            summary(eff_size(contrast(post_hocs.emmean, method = list.contrasts,adjust = "FDR"),
+#                             sigma = sqrt(mean(sigma(aovmodel1$lm)^2)), # RMS of sigma()
+#                             edf = df.residual(aovmodel1$lm), method = "identity"))$lower.CL,
+#          `highCI` =
+#            summary(eff_size(contrast(post_hocs.emmean, method = list.contrasts,adjust = "FDR"),
+#                             sigma = sqrt(mean(sigma(aovmodel1$lm)^2)), # RMS of sigma()
+#                             edf = df.residual(aovmodel1$lm), method = "identity"))$upper.CL
+#   )%>%
+#   kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+#         caption = c("estimated contrasts | by ATTENTION X LUMINANCE | dv = central SSVEP modulation | corrected: FDR")) %>%
+#   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+```
+
+
