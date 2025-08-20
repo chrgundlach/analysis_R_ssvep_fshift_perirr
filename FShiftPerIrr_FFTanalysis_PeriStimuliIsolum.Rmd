@@ -124,6 +124,13 @@ t_baseline = c(-1000, 0)
 # t_baseline = c(-1000, 0)
 
 
+# exploratory | induced removed as in FShiftAlpha
+# broad cluster | larger central cluster as in Tango study | peri both clusters but smaller
+# CSD based normalized to pre-cue baseline in %
+# for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
+# DATAPath = "data_in/FFT_Amp_data_CenterTangoStudyPeriSmall_indremov08-15-2025_13-50.csv"
+# t_baseline = c(-1000, 0)
+
 
 
 options(scipen=1, digits=7)
@@ -1594,7 +1601,7 @@ dat2plot %>%
                         bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
                         align = "center")
   ) %>%
-  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
         caption = c("central SSVEP | amp diff | t-tests for modulation agains zero | Holm-corrected")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 
@@ -1629,7 +1636,7 @@ dat2plot %>%
                         bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
                         align = "center")
   ) %>%
-  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("central SSVEP | amp diff | attended - unattended ")) %>%
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("central SSVEP | amp diff | attended - unattended ")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 
 ```
@@ -2522,7 +2529,7 @@ dat2plot %>%
                         bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
                         align = "center")
   ) %>%
-  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
         caption = c("SSVEP | modulation | t-tests for modulation agains zero | Holm-corrected")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 
@@ -2556,7 +2563,7 @@ dat2plot %>%
                         bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
                         align = "center")
   ) %>%
-  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("SSVEP | modulation | center - peri ")) %>%
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("SSVEP | modulation | center - peri ")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 
 ```
@@ -2617,7 +2624,7 @@ dat2plot %>%
                         align = "center")
   ) %>%
   dplyr::select(RDK_colorlum, term, `num.Df`, `den.Df`, MSE, `statistic`, ges, `p.value`) %>%
-  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("repeated measures ANOVA for peripheral SSVEP amplitudes")) %>%
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("repeated measures ANOVA for peripheral SSVEP amplitudes")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 
 
@@ -2647,7 +2654,7 @@ dat2plot2 %>%
                         align = "center")
   ) %>%
   arrange(RDK_colorlum,condition2,RDK_isattended)%>%
-  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
         caption = c("peripheral SSVEP | modulation | t-tests for pre-cue amplitudes against zero | Holm-corrected")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 
@@ -2686,7 +2693,7 @@ dat2plot2 %>%
                         bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
                         align = "center")
   ) %>%
-  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("peripheral SSVEP | pre-cue amplitudes | contrasts")) %>%
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("peripheral SSVEP | pre-cue amplitudes | contrasts")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 
 ```
