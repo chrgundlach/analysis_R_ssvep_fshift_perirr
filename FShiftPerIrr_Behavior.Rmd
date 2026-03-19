@@ -45,7 +45,7 @@ library(cowplot)
 library(ggpol)
 library(psych)
 
-source('C:/Users/psy05cvd/Dropbox/work/R-statistics/general_functions/RainCloudPlots/tutorial_R/R_rainclouds.R')
+source('C:/Dropboxdata/Dropbox/work/R-statistics/general_functions/RainCloudPlots/tutorial_R/R_rainclouds.R')
 
 
 
@@ -112,7 +112,7 @@ DATA_Trials <- DataIn1%>%
 
 dat2plot <- DATA_Trials %>%
   group_by(participant, colorlum)%>%
-  summarise(
+  dplyr::summarise(
     RT_Mean=mean(RT,na.rm=TRUE),
     RT_STD=sd(RT,na.rm=TRUE),
     Hitrate=(sum(response=='hit')/n())*100,
@@ -123,7 +123,7 @@ dat2plot <- DATA_Trials %>%
 dat2plot1a = DataIn1%>%
   filter(eventtype=="distractor") %>%
   group_by(participant, colorlum)%>%
-  summarise(
+  dplyr::summarise(
     FArate=(sum(response=='FA_proper')/n())*100,
     FArate_adj1 = ifelse((sum(response=='FA_proper')/n())>0,
                          min(c(sum(response=='FA_proper')/n(), 1-(.5/n()))),
@@ -342,6 +342,216 @@ plotttitle <- ggdraw() + draw_label("behavioral measures", fontface='bold')
 plotplots <- ggarrange(plot1, plot1b,plot2, plot2b, ncol = 4,common.legend = TRUE,align = "h", widths=c(3,2,3,2))
 
 savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 5, height = 6, unit = "in")
+saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
+
+savefig %<>%
+  fill_panel(saveplot, column = 1, row = 1)
+savefig
+# save_multi_panel_figure(savefig, "dprime_reactiontimes.eps")
+  
+
+```
+
+
+<br>  
+
+```{r plot_data_avg, results = "hide",  fig.height=6, fig.width=10, warning = FALSE}
+
+dat2plot1 <- DATA_Trials %>%
+  group_by(participant, colorlum)%>%
+  dplyr::summarise(
+    RT_Mean=mean(RT,na.rm=TRUE),
+    RT_STD=sd(RT,na.rm=TRUE),
+    Hitrate=(sum(response=='hit')/n())*100,
+    Hitrate_adj1 = ifelse((sum(response=='hit')/n())>0,
+                         min(c(sum(response=='hit')/n(), 1-(.5/n()))),
+                         .5/n()), # according to Stanislaw H, Todorov N, Behav Res Meth (1999) 31, 137-149, "1/2N rule" or
+    Hitrate_adj2 = (sum(response=='hit')+0.5)/(n()+1))%>% # loglinear approach (Hautus, 1995)
+    ungroup()
+dat2plot1a = DataIn1%>%
+  filter(eventtype=="distractor") %>%
+  group_by(participant, colorlum)%>%
+  dplyr::summarise(
+    FArate=(sum(response=='FA_proper')/n())*100,
+    FArate_adj1 = ifelse((sum(response=='FA_proper')/n())>0,
+                         min(c(sum(response=='FA_proper')/n(), 1-(.5/n()))),
+                         .5/n()), # according to Stanislaw H, Todorov N, Behav Res Meth (1999) 31, 137-149, "1/2N rule" or
+    FArate_adj2 = (sum(response=='FA_proper')+0.5)/(n()+1)) %>% # loglinear approach (Hautus, 1995))
+  ungroup()
+dat2plot <- merge(dat2plot1,dat2plot1a,by = c("participant","colorlum")) %>% # adjust for HR and FR of 0 or 1
+  mutate(
+    d_prime = qnorm(Hitrate_adj1)-qnorm(FArate_adj1),
+    c = -0.5*(qnorm(Hitrate_adj1)+qnorm(FArate_adj1))
+  )
+
+dat2plot2 <- DataIn2 %>%
+  mutate(`FA_all`= FA + `FA_proper`)%>%
+  # dplyr::select(-FA)%>%
+  dplyr::select(-FA_all)%>%
+  pivot_longer(c(-subject ),names_to = "FA_type", values_to = "number")%>%
+  filter(FA_type=='FA_proper' | FA_type=='FA')
+
+
+
+
+## for publication
+theme_set(theme_bw())
+plot1 <- ggplot(dat2plot, aes(x = colorlum, y = RT_Mean, color =colorlum,)) +
+  # geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_beeswarm(cex=4.5, size = 3,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y..), geom='errorbar', width=0.9, size=1.5) +
+  scale_fill_brewer(palette = "Dark2")+
+  scale_color_brewer(palette = "Dark2")+
+  # scale_fill_manual("attended color", values=c("darkcyan", "darkgreen", "darkorange")) +
+  # scale_color_manual("attended color", values=c("darkcyan", "darkgreen", "darkorange")) +
+  ylab(expression(paste("reaction time in ms")))+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  scale_y_continuous(limits=c(400, 800))
+
+plot1b <- ggplot(dat2plot, aes(x = 1, y = RT_Mean, color =colorlum, fill = colorlum)) +
+  geom_flat_violin(position = position_nudge(x = .1, y = 0), adjust = 1.0, trim = FALSE, alpha = 0.8)+
+  # scale_fill_manual(values=c("grey40"))+
+  scale_fill_brewer(palette = "Dark2")+
+  # scale_color_manual(values=c("grey40"))+
+  scale_color_brewer(palette = "Dark2")+
+  theme(axis.title.y=element_blank(),
+         axis.text.y=element_blank(),
+         axis.ticks.y=element_blank())+
+  theme(axis.title.x=element_blank(),
+         axis.text.x=element_blank(),
+         axis.ticks.x=element_blank())+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  scale_y_continuous(limits=c(400, 800))
+
+plot2 <- ggplot(dat2plot, aes(x = colorlum, y = Hitrate, color =colorlum)) +
+  # geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_beeswarm(cex=4.5, size = 3,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y..), geom='errorbar', width=0.9, size=1.5) +
+  scale_fill_brewer(palette = "Dark2")+
+  scale_color_brewer(palette = "Dark2")+
+    # scale_fill_manual("attended color", values=c("darkcyan", "darkgreen", "darkorange")) +
+  # scale_color_manual("attended color", values=c("darkcyan", "darkgreen", "darkorange"))
+  ylab(expression(paste("hit rate in %")))+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  scale_y_continuous(limits=c(30, 100))
+
+plot2b <- ggplot(dat2plot, aes(x = 1, y = Hitrate,  color =colorlum, fill = colorlum)) +
+  geom_flat_violin(position = position_nudge(x = .1, y = 0), adjust = 1.0, trim = FALSE, alpha = 0.8)+
+  # scale_fill_manual(values=c("grey40"))+
+  scale_fill_brewer(palette = "Dark2")+
+  # scale_color_manual(values=c("grey40"))+
+  scale_color_brewer(palette = "Dark2")+
+  theme(axis.title.y=element_blank(),
+         axis.text.y=element_blank(),
+         axis.ticks.y=element_blank())+
+  theme(axis.title.x=element_blank(),
+         axis.text.x=element_blank(),
+         axis.ticks.x=element_blank())+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  scale_y_continuous(limits=c(30, 100))
+
+  
+plot3 <- ggplot(dat2plot, aes(x = colorlum, y = d_prime, color =colorlum)) +
+  # geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_beeswarm(cex=4.5, size = 3,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y..), geom='errorbar', width=0.9, size=1.5) +
+  scale_fill_brewer(palette = "Dark2")+
+  scale_color_brewer(palette = "Dark2")+
+  # scale_fill_manual("attended color", values=c("darkcyan", "darkgreen", "darkorange")) +
+  # scale_color_manual("attended color", values=c("darkcyan", "darkgreen", "darkorange"))
+  ylab(expression(paste("dprime")))+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  scale_y_continuous(limits=c(0.0, 5))
+
+plot3b <- ggplot(dat2plot, aes(x = 1, y = d_prime, color =colorlum, fill = colorlum)) +
+  geom_flat_violin(position = position_nudge(x = .1, y = 0), adjust = 1.0, trim = FALSE, alpha = 0.8)+
+  # scale_fill_manual(values=c("grey40"))+
+  scale_fill_brewer(palette = "Dark2")+
+  # scale_color_manual(values=c("grey40"))+
+  scale_color_brewer(palette = "Dark2")+
+  theme(axis.title.y=element_blank(),
+         axis.text.y=element_blank(),
+         axis.ticks.y=element_blank())+
+  theme(axis.title.x=element_blank(),
+         axis.text.x=element_blank(),
+         axis.ticks.x=element_blank())+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  scale_y_continuous(limits=c(0.0, 5))
+
+
+plot4 <- ggplot(dat2plot, aes(x = colorlum, y = FArate_adj1, color =colorlum)) +
+  # geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_beeswarm(cex=4.5, size = 3,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y..), geom='errorbar', width=0.9, size=1.5) +
+  scale_fill_brewer(palette = "Dark2")+
+  scale_color_brewer(palette = "Dark2")+
+  # scale_fill_manual("attended color", values=c("darkcyan", "darkgreen", "darkorange")) +
+  # scale_color_manual("attended color", values=c("darkcyan", "darkgreen", "darkorange"))
+  ylab(expression(paste("FA rate in %")))+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  scale_y_continuous(limits=c(0.0, 0.5))
+
+plot4b <- ggplot(dat2plot, aes(x = 1, y = FArate_adj1, color =colorlum, fill = colorlum)) +
+  geom_flat_violin(position = position_nudge(x = .1, y = 0), adjust = 1.0, trim = FALSE, alpha = 0.8)+
+  # scale_fill_manual(values=c("grey40"))+
+  scale_fill_brewer(palette = "Dark2")+
+  # scale_color_manual(values=c("grey40"))+
+  scale_color_brewer(palette = "Dark2")+
+  theme(axis.title.y=element_blank(),
+         axis.text.y=element_blank(),
+         axis.ticks.y=element_blank())+
+  theme(axis.title.x=element_blank(),
+         axis.text.x=element_blank(),
+         axis.ticks.x=element_blank())+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  scale_y_continuous(limits=c(0.0, 0.5))
+
+
+plot5 <- ggplot(dat2plot, aes(x = colorlum, y = c, color =colorlum)) +
+  # geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_beeswarm(cex=4.5, size = 3,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y..), geom='errorbar', width=0.9, size=1.5) +
+  scale_fill_brewer(palette = "Dark2")+
+  scale_color_brewer(palette = "Dark2")+
+  # scale_fill_manual("attended color", values=c("darkcyan", "darkgreen", "darkorange")) +
+  # scale_color_manual("attended color", values=c("darkcyan", "darkgreen", "darkorange"))
+  ylab(expression(paste("c")))+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  scale_y_continuous(limits=c(-1, 1))
+
+plot5b <- ggplot(dat2plot, aes(x = 1, y = c, color =colorlum, fill = colorlum)) +
+  geom_flat_violin(position = position_nudge(x = .1, y = 0), adjust = 1.0, trim = FALSE, alpha = 0.8)+
+  # scale_fill_manual(values=c("grey40"))+
+  scale_fill_brewer(palette = "Dark2")+
+  # scale_color_manual(values=c("grey40"))+
+  scale_color_brewer(palette = "Dark2")+
+  theme(axis.title.y=element_blank(),
+         axis.text.y=element_blank(),
+         axis.ticks.y=element_blank())+
+  theme(axis.title.x=element_blank(),
+         axis.text.x=element_blank(),
+         axis.ticks.x=element_blank())+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  scale_y_continuous(limits=c(-1, 1))
+
+  
+
+# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
+plotttitle <- ggdraw() + draw_label("behavioral measures", fontface='bold')
+plotplots <- ggarrange(plot1, plot1b,plot2, plot2b,plot4, plot4b,plot3, plot3b,plot5, plot5b, 
+                       ncol = 10,common.legend = TRUE,align = "h", widths=c(3,2,3,2,3,2,3,2,3,2))
+
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 10, height = 6, unit = "in")
 saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
 
 savefig %<>%
@@ -621,13 +831,13 @@ dat2plot2 <- DataIn2 %>%
 
 dat2plot <- DATA_Trials %>%
   group_by(participant,colorlum)%>%
-  summarise(RT_Mean=mean(RT,na.rm=TRUE),RT_STD=sd(RT,na.rm=TRUE),Hitrate=(sum(response=='hit')/n())*100)
+  dplyr::summarise(RT_Mean=mean(RT,na.rm=TRUE),RT_STD=sd(RT,na.rm=TRUE),Hitrate=(sum(response=='hit')/n())*100)
 
 dat2plot2 <- DataIn2 %>%
   mutate(`FA_all`= FA + `FA_proper`)%>%
   # dplyr::select(-FA)%>%
   dplyr::select(-FA_all)%>%
-  rename(participant=subject)
+  dplyr::rename(participant=subject)
 
 dat2plot_all <- merge(dat2plot,dat2plot2) %>%
   mutate(
@@ -659,7 +869,7 @@ dat2plot_all <- merge(dat2plot,dat2plot2) %>%
 dat2plot_all %>%
   nest() %>%
   mutate(
-    stats = map(data, ~ broom::tidy(t.test(RT_Mean ~ colorlum, data = ., paired = FALSE))),
+    stats = map(data, ~ broom::tidy(t.test(RT_Mean ~ colorlum, data = .))),
     t_test_bf = map(data, ~ extractBF(ttestBF(formula = RT_Mean ~ colorlum, data = ., iterations = num.iter, rscale = sqrt(2)/2))),
     meanval = map(data, ~ .x %>%
                     group_by(colorlum) %>%
@@ -667,8 +877,8 @@ dat2plot_all %>%
                       mean_RT_Mean = mean(RT_Mean, na.rm = TRUE),
                       std_RT_Mean = sd(RT_Mean, na.rm = TRUE)
                     ) %>%
-                    pivot_wider(names_from = colorlum, 
-                                values_from = c(mean_RT_Mean, std_RT_Mean), 
+                    pivot_wider(names_from = colorlum,
+                                values_from = c(mean_RT_Mean, std_RT_Mean),
                                 names_sep = "_")
     ),
     cohens_d = map(data, ~ rstatix::cohens_d(RT_Mean ~ colorlum, data = ., paired = FALSE))

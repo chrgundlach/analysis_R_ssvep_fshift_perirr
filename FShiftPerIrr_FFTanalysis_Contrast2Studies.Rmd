@@ -16,6 +16,7 @@ via linear mixed models
 via standard anova models
 
 ```{r load_package, message = FALSE, warning = FALSE}
+rm(list=ls()) # clear environment
 library(lme4)
 library(readxl)
 library(tidyverse)
@@ -46,6 +47,10 @@ library(DescTools)
 library(cowplot)
 library(ggpol)
 library(logspline)
+
+library(brms)
+
+library(bayestestR)
 
 source('C:/Dropboxdata/Dropbox/work/R-statistics/general_functions/RainCloudPlots/tutorial_R/R_rainclouds.R')
 source('C:/Dropboxdata/Dropbox/work/R-statistics/general_functions/RainCloudPlots/tutorial_R/R_rainclouds.R')
@@ -695,6 +700,8 @@ post_hocs.emmean %>%
 
 **modulation** ~ **COLOR ATTENTION**
 
+conventional analysis with anova and post-hoc t-tests implemented manually
+
 - t-test post-cue modulation against zero for attended and unattended color
 - t-test difference of post-cue modulation for attended vs unattended color
 
@@ -706,6 +713,28 @@ dat2plot <- DataIn %>%
   group_by(subjects, time, RDK_isattended, RDK_colorlum)%>%
   summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
   filter(time == '[0.5 1.5] ')
+
+
+aovmodel1 <- dat2plot%>%
+  aov_ez(id="subjects", dv = "modulation_evoked", data = ., within = c("RDK_isattended"), between = c("RDK_colorlum"),
+         include_aov = afex_options("include_aov"))
+
+
+# display table anova effects
+aovmodel1 %>%
+  anova()%>%
+  tidy()%>%
+  mutate(
+    `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
+                        color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
+                        bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
+                        align = "center")
+  ) %>%
+  dplyr::select(term, `num.Df`, `den.Df`, MSE, `statistic`, ges, `p.value`) %>%
+  dplyr::rename(F=statistic)%>%
+  kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), caption = c("Mixed effects ANOVA model for central post-cue modulations")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
 
 dat2plot %>%
   group_by(RDK_isattended, RDK_colorlum)%>%
@@ -774,499 +803,116 @@ dat2plot %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 
 ```
-#### analysis IIb
 
-**modulation** ~ **COLOR ATTENTION** x **PERI STIM CONDITION**
+#### analysis III
 
-- ANOVA
-- post hoc contrast via emmeans
+**modulation** ~ **COLOR ATTENTION**
 
-<br> 
+Bayesian analysis via brms to allow inclusion of Bayes Factor estimation for mixed models
 
-```{r Stat central stimuli analysisIIb, message=FALSE, warning=FALSE, include=TRUE,fig.height=3, fig.width=3.5}
-dat2plot <- DataIn %>%
-  filter(RDK_position2=="center", RDK_colorlum=="isolum__to_bckgrd") %>%
-  mutate(condition_label = case_when(
-    condition %in% c(1,2) ~ "peri_AttUnatt",
-    condition %in% c(3,4) ~ "peri_AttIrrel",
-    condition %in% c(5,6) ~ "peri_UnattIrrel"
-  ))%>%
-  group_by(subjects, time, RDK_isattended, condition_label)%>%
-  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
-  filter(time != '[1 2] ')
-
-#average data by mean amplitude across all conditions
-aovmodel1_data <- dat2plot %>%
-  filter(time == '[-1 0] ')%>%
-  group_by(subjects)%>%
-  mutate(amplitude_evoked_norm = (amplitude_evoked/mean(amplitude_evoked)-1)*100)
-
-aovmodel1_data %>%
-  ungroup()%>%
-  group_by(condition_label,RDK_isattended)%>%
-  summarise(
-    n = n(),
-    M=mean(amplitude_evoked_norm),
-    SD=sd(amplitude_evoked_norm)
-  )%>%
-  kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), caption = c("descriptives for central SSVEP pre-cue modulations (normalized by mean amplitudes)")) %>%
-  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
-
-aovmodel1 <- aovmodel1_data%>%
-  aov_ez(id="subjects", dv = "amplitude_evoked_norm", data = ., within = c("RDK_isattended","condition_label"),
-         include_aov = afex_options("include_aov"))
-
-# display table anova effects
-aovmodel1 %>%
-  anova()%>%
-  tidy()%>%
-  mutate(
-    `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
-                        color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
-                        bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
-                        align = "center")
-  ) %>%
-  dplyr::select(term, `num.Df`, `den.Df`, MSE, `statistic`, ges, `p.value`) %>%
-  kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), 
-      caption = c("repeated measures ANOVA for central SSVEP pre-cue modulations (normalized by mean amplitudes)")) %>%
-  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
-
-#post-cue descriptives
-dat2plot %>%
-  filter(time == '[0.5 1.5] ') %>%
-  ungroup()%>%
-  group_by(condition_label,RDK_isattended)%>%
-  summarise(
-    n = n(),
-    M=mean(modulation_evoked),
-    SD=sd(modulation_evoked)
-  )%>%
-  kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), caption = c("descriptives for central SSVEP post-cue modulations")) %>%
-  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
-
-# post cue anova
-aovmodel2 <- dat2plot %>%
-  filter(time == '[0.5 1.5] ')%>%
-  aov_ez(id="subjects", dv = "modulation_evoked", data = ., within = c("RDK_isattended","condition_label"),include_aov = afex_options("include_aov"))
-
-# display table anova effects
-aovmodel2 %>%
-  anova()%>%
-  tidy()%>%
-  mutate(
-    `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
-                        color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
-                        bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
-                        align = "center")
-  ) %>%
-  dplyr::select(term, `num.Df`, `den.Df`, MSE, `statistic`, ges, `p.value`) %>%
-  kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), caption = c("repeated measures ANOVA for central post-cue modulations")) %>%
-  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
-
-#display main effects via emmeans
-# Main effect of RDK_isattended
-emm_ATT <- as.data.frame(emmeans(aovmodel2, ~ RDK_isattended))
-
-# Main effect of condition_label
-emm_Pericondition <- as.data.frame(emmeans(aovmodel2, ~ condition_label))
-
-# RDK_isattended plot
-ggplot(emm_ATT, aes(x = RDK_isattended, y = emmean, fill = RDK_isattended)) +
-  geom_col(position = position_dodge(), width = 0.6) +
-  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2) +
-  labs(title = "Main Effect of RDK_isattended",
-       y = "Estimated Marginal Means (95% CI)", x = "RDK_isattended") +
-  theme_minimal()+
-  scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
-  scale_color_manual(values=c("steelblue2", "#F03F3F"))+
-  theme(axis.text.x = element_blank())
-
-# condition_label plot
-ggplot(emm_Pericondition, aes(x = condition_label, y = emmean, fill = condition_label)) +
-  geom_col(position = position_dodge(), width = 0.6) +
-  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2) +
-  labs(title = "Main Effect of condition_label",
-       y = "Estimated Marginal Means (95% CI)", x = "Condition Label") +
-  theme_minimal()+
-  scale_fill_brewer(palette = "Dark2")+
-  scale_color_brewer(palette = "Dark2")+
-  theme(axis.text.x = element_blank())
-
-#post hoc contrasts
-post_hocs.RDK_isattended <- emmeans(aovmodel2, c("RDK_isattended"), contr = "pairwise",adjust = "holm") # adjust = holm
-post_hocs.condition_label <- emmeans(aovmodel2, c("condition_label"), contr = "pairwise",adjust = "holm") # adjust = holm
-
-# report data for post_hocs.RDK_isattended
-post_hocs.RDK_isattended$emmeans %>%
-  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("estimated marginal means | by ATTENTION | dv = central SSVEP modulation")) %>%
-  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
-
-summary(post_hocs.RDK_isattended$contrasts) %>%
-  mutate(
-    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
-                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
-                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
-                        align = "left")
-  ) %>%
-  # mutate(CohensD = `t.ratio`/sqrt(df+1))%>%
-  mutate(`CohensD` =
-           summary(eff_size(contrast(post_hocs.RDK_isattended, method = "pairwise", adjust = "holm"),
-                            sigma = sqrt(mean(sigma(aovmodel2$lm)^2)), # RMS of sigma()
-                            edf = df.residual(aovmodel2$lm), method = "identity"))$effect.size,
-         `lowCI` =
-           summary(eff_size(contrast(post_hocs.RDK_isattended, method = "pairwise", adjust = "holm"),
-                            sigma = sqrt(mean(sigma(aovmodel2$lm)^2)), # RMS of sigma()
-                            edf = df.residual(aovmodel2$lm), method = "identity"))$lower.CL,
-         `highCI` =
-           summary(eff_size(contrast(post_hocs.RDK_isattended, method = "pairwise", adjust = "holm"),
-                            sigma = sqrt(mean(sigma(aovmodel2$lm)^2)), # RMS of sigma()
-                            edf = df.residual(aovmodel2$lm), method = "identity"))$upper.CL
-  )%>%
-  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
-        caption = c("contrasts for estimated marginal means |by ATTENTION | dv = central SSVEP modulation | corrected: Holm")) %>%
-  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
-
-# report data for post_hocs.condition_label
-post_hocs.condition_label$emmeans %>%
-  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("estimated marginal means | by PERI_CON | dv = central SSVEP modulation")) %>%
-  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
-
-summary(post_hocs.condition_label$contrasts) %>%
-  mutate(
-    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
-                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
-                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
-                        align = "left")
-  ) %>%
-  # mutate(CohensD = `t.ratio`/sqrt(df+1))%>%
-  mutate(`CohensD` =
-           summary(eff_size(contrast(post_hocs.condition_label, method = "pairwise", adjust = "holm"),
-                            sigma = sqrt(mean(sigma(aovmodel2$lm)^2)), # RMS of sigma()
-                            edf = df.residual(aovmodel2$lm), method = "identity"))$effect.size,
-         `lowCI` =
-           summary(eff_size(contrast(post_hocs.condition_label, method = "pairwise", adjust = "holm"),
-                            sigma = sqrt(mean(sigma(aovmodel2$lm)^2)), # RMS of sigma()
-                            edf = df.residual(aovmodel2$lm), method = "identity"))$lower.CL,
-         `highCI` =
-           summary(eff_size(contrast(post_hocs.condition_label, method = "pairwise", adjust = "holm"),
-                            sigma = sqrt(mean(sigma(aovmodel2$lm)^2)), # RMS of sigma()
-                            edf = df.residual(aovmodel2$lm), method = "identity"))$upper.CL
-  )%>%
-  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
-        caption = c("contrasts for estimated marginal means |by PERI CON | dv = central SSVEP modulation | corrected: Holm")) %>%
-  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
-
-# pairs(emmeans(aovmodel2, ~ RDK_isattended))
-# pairs(emmeans(aovmodel2, ~ condition_label))
-```
-
-#### analysis IIc
-
-**modulation** ~ **COLOR ATTENTION** x **PERI STIM CONDITION**
-
-- linear mixed models
-- post hoc contrast via emmeans
-
-<br> 
-
-```{r Stat central stimuli analysisIIc, message=FALSE, warning=FALSE, include=TRUE,fig.height=3, fig.width=3.5}
-dat2plot <- DataIn %>%
-  filter(RDK_position2=="center", RDK_colorlum=="isolum__to_bckgrd") %>%
-  mutate(condition_label = case_when(
-    condition %in% c(1,2) ~ "peri_AttUnatt",
-    condition %in% c(3,4) ~ "peri_AttIrrel",
-    condition %in% c(5,6) ~ "peri_UnattIrrel"
-  ))%>%
-  group_by(subjects, time, RDK_isattended, condition_label)%>%
-  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
-  filter(time != '[1 2] ')
-
-#average data by mean amplitude across all conditions
-LMMmodel1_data <- dat2plot %>%
-  filter(time == '[-1 0] ')%>%
-  group_by(subjects)%>%
-  mutate(amplitude_evoked_norm = (amplitude_evoked/mean(amplitude_evoked)-1)*100)
-
-lmmmodel1 <- LMMmodel1_data%>%
-  mixed(
-    amplitude_evoked ~ RDK_isattended * condition_label + (1 | subjects),
-    data = .,
-    method = "KR",  # Kenward-Roger approximation for p-values
-    return = "afex_aov"  # ensures compatibility with emmeans
-  )
-
-# display table anova effects
-lmmmodel1 %>%
-  anova()%>%
-  tidy()%>%
-  mutate(
-    `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
-                        color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
-                        bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
-                        align = "center")
-  ) %>%
-  dplyr::select(term, `num.Df`, `den.Df`, `statistic`, `p.value`) %>%
-  kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), 
-      caption = c("Mixed Model Anova Table (Type 3 tests, KR-method) | central SSVEP pre-cue modulations (normalized by mean amplitudes)")) %>%
-  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
-
-
-
-# post cue anova
-lmmmodel2 <- dat2plot %>%
-  filter(time == '[0.5 1.5] ')%>%
-  mixed(
-    modulation_evoked ~ RDK_isattended * condition_label + (1 | subjects),
-    data = .,
-    method = "KR",  # Kenward-Roger approximation for p-values
-    return = "afex_aov"  # ensures compatibility with emmeans
-  )
-
-lmmmodel2 %>%
-  anova()%>%
-  tidy()%>%
-  mutate(
-    `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
-                        color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
-                        bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
-                        align = "center")
-  ) %>%
-  dplyr::select(term, `num.Df`, `den.Df`, `statistic`, `p.value`) %>%
-  kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), 
-      caption = c("Mixed Model Anova Table (Type 3 tests, KR-method) | central SSVEP post-cue modulations")) %>%
-  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
-
-
-#display main effects via emmeans
-# Main effect of RDK_isattended
-emm_ATT_lmm <- as.data.frame(emmeans(lmmmodel2, ~ RDK_isattended))
-
-# Main effect of condition_label
-emm_Pericondition_lmm <- as.data.frame(emmeans(lmmmodel2, ~ condition_label))
-
-# RDK_isattended plot
-ggplot(emm_ATT_lmm, aes(x = RDK_isattended, y = emmean, fill = RDK_isattended)) +
-  geom_col(position = position_dodge(), width = 0.6) +
-  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2) +
-  labs(title = "Main Effect of RDK_isattended",
-       y = "Estimated Marginal Means (95% CI)", x = "RDK_isattended") +
-  theme_minimal()+
-  scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
-  scale_color_manual(values=c("steelblue2", "#F03F3F"))+
-  theme(axis.text.x = element_blank())
-
-# condition_label plot
-ggplot(emm_Pericondition_lmm, aes(x = condition_label, y = emmean, fill = condition_label)) +
-  geom_col(position = position_dodge(), width = 0.6) +
-  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2) +
-  labs(title = "Main Effect of condition_label",
-       y = "Estimated Marginal Means (95% CI)", x = "Condition Label") +
-  theme_minimal()+
-  scale_fill_brewer(palette = "Dark2")+
-  scale_color_brewer(palette = "Dark2")+
-  theme(axis.text.x = element_blank())
-
-#post hoc contrasts identity
-post_hocs.RDK_isattended_id <- emmeans(lmmmodel2, c("RDK_isattended"), contr = "identity",adjust = "FDR") # adjust = holm
-post_hocs.condition_label_id <- emmeans(lmmmodel2, c("condition_label"), contr = "identity",adjust = "FDR") # adjust = holm
-
-# report data for post_hoc attention
-post_hocs.RDK_isattended_id%>%
-  .$contrasts %>%
-  tidy()%>%
-  dplyr::rename(t.ratio=statistic, p.value=adj.p.value)%>%
-  mutate(
-    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
-                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
-                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
-                        align = "left")
-  ) %>% # mutate(CohensD = `t.ratio`/sqrt(df+1))%>%
-  mutate(`CohensD` =
-           summary(eff_size(post_hocs.RDK_isattended_id,
-                            sigma = sqrt(mean(sigma(lmmmodel2$full_model)^2)), # RMS of sigma()
-                            edf = df.residual(lmmmodel2$full_model), method = "identity"))$effect.size,
-         `lowCI` =
-           summary(eff_size(post_hocs.RDK_isattended_id,
-                            sigma = sqrt(mean(sigma(lmmmodel2$full_model)^2)), # RMS of sigma()
-                            edf = df.residual(lmmmodel2$full_model), method = "identity"))$lower.CL,
-         `highCI` =
-           summary(eff_size(post_hocs.RDK_isattended_id,
-                            sigma = sqrt(mean(sigma(lmmmodel2$full_model)^2)), # RMS of sigma()
-                            edf = df.residual(lmmmodel2$full_model), method = "identity"))$upper.CL
-  )%>%
-  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
-      caption = c("estimated marginal means | by PERI_CON | dv = central SSVEP modulation | FDR corrected")) %>%
-  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
-
-# report data for post_hoc condition_label
-post_hocs.condition_label_id%>%
-  .$contrasts %>%
-  tidy()%>%
-  dplyr::rename(t.ratio=statistic, p.value=adj.p.value)%>%
-  mutate(
-    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
-                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
-                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
-                        align = "left")
-  ) %>% # mutate(CohensD = `t.ratio`/sqrt(df+1))%>%
-  mutate(`CohensD` =
-           summary(eff_size(post_hocs.condition_label_id,
-                            sigma = sqrt(mean(sigma(lmmmodel2$full_model)^2)), # RMS of sigma()
-                            edf = df.residual(lmmmodel2$full_model), method = "identity"))$effect.size,
-         `lowCI` =
-           summary(eff_size(post_hocs.condition_label_id,
-                            sigma = sqrt(mean(sigma(lmmmodel2$full_model)^2)), # RMS of sigma()
-                            edf = df.residual(lmmmodel2$full_model), method = "identity"))$lower.CL,
-         `highCI` =
-           summary(eff_size(post_hocs.condition_label_id,
-                            sigma = sqrt(mean(sigma(lmmmodel2$full_model)^2)), # RMS of sigma()
-                            edf = df.residual(lmmmodel2$full_model), method = "identity"))$upper.CL
-  )%>%
-  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
-      caption = c("estimated marginal means | by PERI_CON | dv = central SSVEP modulation | FDR corrected")) %>%
-  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
-
-
-
-
-#post hoc contrasts paired
-post_hocs.RDK_isattended <- emmeans(lmmmodel2, c("RDK_isattended"), contr = "pairwise",adjust = "FDR") # adjust = holm
-post_hocs.condition_label <- emmeans(lmmmodel2, c("condition_label"), contr = "pairwise",adjust = "FDR") # adjust = holm
-
-
-summary(post_hocs.RDK_isattended$contrasts) %>%
-  mutate(
-    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
-                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
-                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
-                        align = "left")
-  ) %>%
-  # mutate(CohensD = `t.ratio`/sqrt(df+1))%>%
-  mutate(`CohensD` =
-           summary(eff_size(post_hocs.RDK_isattended,
-                            sigma = sqrt(mean(sigma(lmmmodel2$full_model)^2)), # RMS of sigma()
-                            edf = df.residual(lmmmodel2$full_model), method = "pairwise"))$effect.size,
-         `lowCI` =
-           summary(eff_size(post_hocs.RDK_isattended,
-                            sigma = sqrt(mean(sigma(lmmmodel2$full_model)^2)), # RMS of sigma()
-                            edf = df.residual(lmmmodel2$full_model), method = "pairwise"))$lower.CL,
-         `highCI` =
-           summary(eff_size(post_hocs.RDK_isattended,
-                            sigma = sqrt(mean(sigma(lmmmodel2$full_model)^2)), # RMS of sigma()
-                            edf = df.residual(lmmmodel2$full_model), method = "pairwise"))$upper.CL
-  )%>%
-  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
-        caption = c("contrasts for estimated marginal means |by ATTENTION | dv = central SSVEP modulation | corrected: FDR")) %>%
-  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
-
-
-summary(post_hocs.condition_label$contrasts) %>%
-  mutate(
-    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
-                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
-                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
-                        align = "left")
-  ) %>%
-  # mutate(CohensD = `t.ratio`/sqrt(df+1))%>%
-  mutate(`CohensD` =
-           summary(eff_size(post_hocs.condition_label,
-                            sigma = sqrt(mean(sigma(lmmmodel2$full_model)^2)), # RMS of sigma()
-                            edf = df.residual(lmmmodel2$full_model), method = "pairwise"))$effect.size,
-         `lowCI` =
-           summary(eff_size(post_hocs.condition_label,
-                            sigma = sqrt(mean(sigma(lmmmodel2$full_model)^2)), # RMS of sigma()
-                            edf = df.residual(lmmmodel2$full_model), method = "pairwise"))$lower.CL,
-         `highCI` =
-           summary(eff_size(post_hocs.condition_label,
-                            sigma = sqrt(mean(sigma(lmmmodel2$full_model)^2)), # RMS of sigma()
-                            edf = df.residual(lmmmodel2$full_model), method = "pairwise"))$upper.CL
-  )%>%
-  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
-        caption = c("contrasts for estimated marginal means |by PERI CON | dv = central SSVEP modulation | corrected: Holm")) %>%
-  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
-
-# pairs(emmeans(aovmodel2, ~ RDK_isattended))
-# pairs(emmeans(aovmodel2, ~ condition_label))
-```
-
-**amp diff** ~ **COLOR ATTENTION**
-
-- t-test post-cue modulation against zero for attended and unattended color
-- t-test difference of post-cue modulation for attended vs unattended color
-
-<br> 
-
-```{r Stat2 central stimuli, message=FALSE, warning=FALSE, include=TRUE}
+```{r Stat central stimuli analysisIII, message=FALSE, warning=FALSE, include=TRUE}
 dat2plot <- DataIn %>%
   filter(RDK_position2=="center") %>%
   group_by(subjects, time, RDK_isattended, RDK_colorlum)%>%
-  summarise(subtraction_evoked=mean(subtraction_evoked), modulation_evoked=mean(modulation_evoked))%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
   filter(time == '[0.5 1.5] ')
 
-dat2plot %>%
-  group_by(RDK_isattended, RDK_colorlum)%>%
-  nest()%>%
-  mutate(stats = map(data, ~broom::tidy(
-    t.test(subtraction_evoked ~ 1, data = .)
-  ))) %>%
-  mutate(
-    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$subtraction_evoked, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
-  )%>%
-  mutate(meanval = map(data, ~ mean(.x$subtraction_evoked))) %>%
-  mutate(std = map(data, ~ sd(.x$subtraction_evoked))) %>%
-  dplyr::select(-data) %>%
-  unnest(cols = c(stats, t_test_bf, meanval, std))%>%
-  mutate(BF10 = bf, BF01 = 1/bf)%>%
-  dplyr::select(RDK_colorlum, RDK_isattended, meanval, std,  statistic, parameter, p.value, BF10, BF01)%>%
-  mutate(p.value = p.adjust(p.value, method="holm")) %>% # none, holm
-  # mutate(p.value = p.adjust(p.value, method="none")) %>% # none, holm
-  ungroup()%>%
-  mutate(CohensD = `statistic`/sqrt(parameter +1))%>%
-  mutate(
-    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
-                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
-                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
-                        align = "center")
-  ) %>%
-  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
-        caption = c("central SSVEP | amp diff | t-tests for modulation agains zero | Holm-corrected")) %>%
+
+
+# Fit the model
+# (1 | subjects) accounts for the random intercept per subject
+bayesian_model <- brm(
+  formula = modulation_evoked ~ RDK_isattended * RDK_colorlum + (1 | subjects), 
+  data = dat2plot,
+  family = gaussian(),
+  prior = set_prior("normal(0, 20)", class = "b"), # Optional: set your priors
+  # prior = set_prior("cauchy(0, 0.707)", class = "b"), # medium prior
+  chains = 4, iter = 2000, core = 4,
+  file = "fit_full_slog.rds",
+  save_pars = save_pars(all = TRUE),
+  file_refit = "on_change",
+  # file_refit = "always",
+  # file_refit = "never",
+)
+
+# (2 | subjects) fit the prior model only
+bayesian_prior_model <- brm(
+  formula = modulation_evoked ~ RDK_isattended * RDK_colorlum + (1 | subjects), 
+  data = dat2plot,
+  family = gaussian(),
+  prior = set_prior("normal(0, 20)", class = "b"), # Optional: set your priors
+  # prior = set_prior("cauchy(0, 0.707)", class = "b"), # medium prior
+  chains = 4, iter = 2000, core = 4,
+  file = "fit_full_prior_slog.rds",
+  save_pars = save_pars(all = TRUE),
+  file_refit = "on_change",
+  # file_refit = "always",
+  # file_refit = "never",
+  sample_prior = "only" # This ignores your actual DV values
+)
+
+# (3 | subjects) fit the null model only
+bayesian_null_model <- brm(
+  formula = modulation_evoked ~ 1 + (1 | subjects), 
+  data = dat2plot,
+  family = gaussian(),
+  prior = set_prior("normal(0, 20)", class = "Intercept"), # Optional: set your priors
+  # prior = set_prior("cauchy(0, 0.707)", class = "b"), # medium prior
+  chains = 4, iter = 2000, core = 4,
+  file = "fit_null_slog.rds",
+  save_pars = save_pars(all = TRUE),
+  file_refit = "on_change",
+  # file_refit = "always",
+  # file_refit = "never",
+)
+
+
+# report results for some designed contrasts
+# create emmmgrid
+bayesian_emm <- emmeans(bayesian_model, ~ RDK_isattended * RDK_colorlum)
+
+# defined contrasts
+list.contrasts <- list(
+  "iso att vs unatt"=c(1, -1, 0, 0),
+  "offset att vs unatt"=c(0, 0, 1, -1),
+  "att iso vs offset"=c(1,0,-1,0),
+  "unatt iso vs offset"=c(0, 1, 0, -1)
+)
+
+# compute contrasts
+bayesian_contrasts<-bayesian_emm %>%
+  contrast(method = list.contrasts)
+
+bayesian_contrasts %>%
+  summary() %>%
+    kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+        caption = c("estimated contrasts | by ATTENTION X LUMINANCE | dv = central SSVEP modulation | BRMs framework")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+
+# no calculate Bayes factors for these contrasts
+# Force the calculation to look at the samples
+prior_model <- unupdate(bayesian_model)
+prior_emm <- emmeans(prior_model, ~ RDK_isattended * RDK_colorlum)
+prior_emm_contrasts <- prior_emm %>%
+  contrast(method = list.contrasts)
+
+bayesian_contrasts_BF <- bayesfactor_parameters(bayesian_contrasts, prior = prior_emm_contrasts)
+
+bayesian_contrasts_BF%>%
+  as.data.frame() %>%
+  mutate(BF10 = exp(log_BF), BF01 = 1/exp(log_BF)) %>%
+  # Optional: Round to 2 decimal places unless it's very small
+  mutate(BF = ifelse(BF > 1000, formatC(BF, format = "e", digits = 3), round(BF, 3))) %>%
+  mutate(BF = ifelse(BF > 1000, formatC(BF, format = "e", digits = 3), round(BF, 3))) %>%
+  dplyr::select(contrast, BF, -log_BF)%>%
+    kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+        caption = c("estimated contrasts | by ATTENTION X LUMINANCE | dv = central SSVEP modulation | BRMs framework")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 
 
 
-dat2plot %>%
-  dplyr::select(-modulation_evoked)%>%
-  pivot_wider(names_from = "RDK_isattended", values_from = "subtraction_evoked")%>%
-  mutate(attendedMINUSunattended = `attended` -`not attended`)%>%
-  group_by(time, RDK_colorlum)%>%
-  nest()%>%
-  mutate(stats = map(data, ~broom::tidy(
-    t.test(attendedMINUSunattended ~ 1, data = .)
-  ))) %>%
-  mutate(
-    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$attendedMINUSunattended, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
-  )%>%
-  mutate(meanval = map(data, ~ mean(.x$attendedMINUSunattended))) %>%
-  mutate(std = map(data, ~ sd(.x$attendedMINUSunattended))) %>%
-  ungroup()%>%
-  dplyr::select(-data, -time) %>%
-  unnest(cols = c(stats, t_test_bf, meanval, std))%>%
-  mutate(BF10 = bf, BF01 = 1/bf)%>%
-  dplyr::select(RDK_colorlum, meanval, std,  statistic, parameter, p.value, BF10, BF01)%>%
-  # mutate(p.value = p.adjust(p.value, method="holm")) %>% # none, holm
-  # mutate(p.value = p.adjust(p.value, method="none")) %>% # none, holm
-  ungroup()%>%
-  mutate(CohensD = `statistic`/sqrt(parameter +1))%>%
-  mutate(
-    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
-                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
-                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
-                        align = "center")
-  ) %>%
-  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("central SSVEP | amp diff | attended - unattended ")) %>%
-  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 
 ```
-
 
 

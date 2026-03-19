@@ -47,6 +47,8 @@ library(cowplot)
 library(ggpol)
 library(logspline)
 
+library(effectsize)
+
 source('C:/Dropboxdata/Dropbox/work/R-statistics/general_functions/RainCloudPlots/tutorial_R/R_rainclouds.R')
 source('C:/Dropboxdata/Dropbox/work/R-statistics/general_functions/RainCloudPlots/tutorial_R/R_rainclouds.R')
 
@@ -1381,22 +1383,34 @@ lmmmodel2 <- dat2plot %>%
     modulation_evoked ~ RDK_isattended * condition_label + (1 | subjects),
     data = .,
     method = "KR",  # Kenward-Roger approximation for p-values
-    return = "afex_aov"  # ensures compatibility with emmeans
+    return = "afex_aov",  # ensures compatibility with emmeans
   )
+
+# compute generalized eta squared
+eta_tab <- effectsize::eta_squared(lmmmodel2, generalized = TRUE, partial = FALSE) %>%
+  as.data.frame() %>%
+  dplyr::select(Parameter, Eta2_partial)
+
 
 lmmmodel2 %>%
   anova()%>%
   tidy()%>%
+  left_join(eta_tab, by = c("term" = "Parameter")) %>%
   mutate(
     `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
                         color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
                         bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
                         align = "center")
   ) %>%
-  dplyr::select(term, `num.Df`, `den.Df`, `statistic`, `p.value`) %>%
+  dplyr::select(term, num.Df, den.Df, statistic, Eta2_partial, `p.value`) %>%
   kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), 
       caption = c("Mixed Model Anova Table (Type 3 tests, KR-method) | central SSVEP post-cue modulations")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+
+
+
+
 
 # Display estimated marginal means of pre-cue amplitudes for the model
 emmeans(lmmmodel2, ~  condition_label*RDK_isattended) %>%
@@ -1417,15 +1431,27 @@ emm_ATT_lmm <- as.data.frame(emmeans(lmmmodel2, ~ RDK_isattended))
 emm_Pericondition_lmm <- as.data.frame(emmeans(lmmmodel2, ~ condition_label))
 
 # RDK_isattended plot
-ggplot(emm_ATT_lmm, aes(x = RDK_isattended, y = emmean, fill = RDK_isattended)) +
+# add some more range to the y axis to allow for some more space for error bars and contrasts
+y_range <- range(c(emm_ATT_lmm$lower.CL, emm_ATT_lmm$upper.CL))
+y_extension <- diff(y_range) * 0.20
+
+saveplot <- ggplot(emm_ATT_lmm, aes(x = RDK_isattended, y = emmean, fill = RDK_isattended)) +
   geom_col(position = position_dodge(), width = 0.6) +
   geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2) +
   labs(title = "Main Effect of RDK_isattended",
        y = "Estimated Marginal Means (95% CI)", x = "RDK_isattended") +
-  theme_minimal()+
+  theme_light() +
   scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
   scale_color_manual(values=c("steelblue2", "#F03F3F"))+
+  scale_y_continuous(limits = c(y_range[1], y_range[2] + y_extension)) +
   theme(axis.text.x = element_blank())
+
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3.5, height = 3, unit = "in")
+savefig %<>%
+  fill_panel(saveplot, column = 1, row = 1)
+savefig
+# save_multi_panel_figure(savefig, "figures/FFT_Center_MargMeans_ATTENTION.eps")
+
 
 # condition_label plot
 ggplot(emm_Pericondition_lmm, aes(x = condition_label, y = emmean, fill = condition_label)) +
@@ -1433,7 +1459,7 @@ ggplot(emm_Pericondition_lmm, aes(x = condition_label, y = emmean, fill = condit
   geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2) +
   labs(title = "No Main Effect of condition_label",
        y = "Estimated Marginal Means (95% CI)", x = "Condition Label") +
-  theme_minimal()+
+  theme_light() +
   scale_fill_brewer(palette = "Dark2")+
   scale_color_brewer(palette = "Dark2")+
   theme(axis.text.x = element_blank())
@@ -1469,6 +1495,7 @@ post_hocs.RDK_isattended_id%>%
   kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
       caption = c("estimated marginal means | by PERI_CON | dv = central SSVEP modulation | FDR corrected")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
 
 # report data for post_hoc condition_label
 post_hocs.condition_label_id%>%
@@ -1517,6 +1544,7 @@ summary(post_hocs.RDK_isattended$contrasts) %>%
   mutate(`CohensD` =
            summary(eff_size(post_hocs.RDK_isattended,
                             sigma = sqrt(mean(sigma(lmmmodel2$full_model)^2)), # RMS of sigma()
+                            # sigma = sigma(lmmmodel2$full_model), # RMS of sigma()
                             edf = df.residual(lmmmodel2$full_model), method = "pairwise"))$effect.size,
          `lowCI` =
            summary(eff_size(post_hocs.RDK_isattended,
@@ -2242,7 +2270,7 @@ dat2plot2 %>%
 
 <br> 
 
-```{r Stat perii stimuli analysisIIb, message=FALSE, warning=FALSE, include=TRUE,fig.height=3, fig.width=3.5}
+```{r Stat perii stimuli analysisIIb, message=FALSE, warning=FALSE, include=TRUE,fig.height=3, fig.width=3.9}
 dat2plot <- DataIn %>%
   filter(RDK_position2!="center", RDK_colorlum=="isolum__to_bckgrd") %>%
   mutate(condition_label = case_when(
@@ -2308,6 +2336,11 @@ lmmmodel2 <- dat2plot %>%
 
 # summary(lmmmodel2$full_model)
 
+# compute generalized eta squared
+eta_tab <- effectsize::eta_squared(lmmmodel2, generalized = TRUE, partial = FALSE) %>%
+  as.data.frame() %>%
+  dplyr::select(Parameter, Eta2_partial)
+
 # Display estimated marginal means of pre-cue amplitudes for the model
 emmeans(lmmmodel2, ~  condition_label*RDK_isattended) %>%
   tidy() %>%
@@ -2321,13 +2354,14 @@ emmeans(lmmmodel2, ~  condition_label*RDK_isattended) %>%
 lmmmodel2 %>%
   anova()%>%
   tidy()%>%
+  left_join(eta_tab, by = c("term" = "Parameter")) %>%
   mutate(
     `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
                         color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
                         bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
                         align = "center")
   ) %>%
-  dplyr::select(term, `num.Df`, `den.Df`, `statistic`, `p.value`) %>%
+  dplyr::select(term, num.Df, den.Df, statistic, Eta2_partial, `p.value`) %>%
   kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), 
       caption = c("Mixed Model Anova Table (Type 3 tests, KR-method) | peripheral SSVEP post-cue modulations")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
@@ -2342,15 +2376,27 @@ emm_ATT_lmm <- as.data.frame(emmeans(lmmmodel2, ~ RDK_isattended))
 emm_Pericondition_lmm <- as.data.frame(emmeans(lmmmodel2, ~ condition_label))
 
 # RDK_isattended plot
-ggplot(emm_ATT_lmm, aes(x = RDK_isattended, y = emmean, fill = RDK_isattended)) +
+# add some more range to the y axis to allow for some more space for error bars and contrasts
+y_range <- range(c(emm_ATT_lmm$lower.CL, emm_ATT_lmm$upper.CL))
+y_extension <- diff(y_range) * 0.40
+
+saveplot <- ggplot(emm_ATT_lmm, aes(x = RDK_isattended, y = emmean, fill = RDK_isattended)) +
   geom_col(position = position_dodge(), width = 0.6) +
   geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2) +
   labs(title = "Main Effect of RDK_isattended",
        y = "Estimated Marginal Means (95% CI)", x = "RDK_isattended") +
-  theme_minimal()+
+  theme_light() +
   scale_fill_manual(values=c("#F1831A", "#293C4A", "#198A83"))+
   scale_color_manual(values=c("#F1831A", "#293C4A", "#198A83"))+
+  scale_y_continuous(limits = c(y_range[1], y_range[2] + y_extension)) +
   theme(axis.text.x = element_blank())
+
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3.9, height = 3, unit = "in")
+savefig %<>%
+  fill_panel(saveplot, column = 1, row = 1)
+savefig
+# save_multi_panel_figure(savefig, "figures/FFT_Peri_MargMeans_ATTENTION.eps")
+
 
 # condition_label plot
 ggplot(emm_Pericondition_lmm, aes(x = condition_label, y = emmean, fill = condition_label)) +
@@ -2358,7 +2404,7 @@ ggplot(emm_Pericondition_lmm, aes(x = condition_label, y = emmean, fill = condit
   geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2) +
   labs(title = "No Main Effect of condition_label",
        y = "Estimated Marginal Means (95% CI)", x = "Condition Label") +
-  theme_minimal()+
+  theme_light() +
   scale_fill_brewer(palette = "Dark2")+
   scale_color_brewer(palette = "Dark2")+
   theme(axis.text.x = element_blank())
