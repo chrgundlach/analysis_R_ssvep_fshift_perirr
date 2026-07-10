@@ -99,7 +99,12 @@ str(DataIn2)
 
 ```{r prepare_data1, results = "hide", fig.show = "hide", warning = FALSE}
 DATA_Trials <- DataIn1%>%
-  filter(eventtype=="target")
+  filter(eventtype=="target") %>%
+  mutate(condition2 = case_when(
+    condition %in% c(1,2) ~ "Att+Unatt",
+    condition %in% c(3,4) ~ "Att+Diff",
+    condition %in% c(5,6) ~ "Unatt+Diff"
+  ))
 
 
 ```
@@ -355,7 +360,7 @@ savefig
 
 <br>  
 
-```{r plot_data_avg, results = "hide",  fig.height=6, fig.width=10, warning = FALSE}
+```{r plot_data_avg2, results = "hide",  fig.height=6, fig.width=10, warning = FALSE}
 
 dat2plot1 <- DATA_Trials %>%
   group_by(participant, colorlum)%>%
@@ -570,7 +575,7 @@ savefig
 ```{r disp_data_avg, warning = FALSE}
 dat2plot <- DATA_Trials %>%
   group_by(colorlum, participant )%>%
-  summarise(
+  dplyr::summarise(
     RT_Mean=mean(RT,na.rm=TRUE),
     RT_STD=sd(RT,na.rm=TRUE),
     Hitrate=(sum(response=='hit')/n())*100,
@@ -582,7 +587,7 @@ dat2plot <- DATA_Trials %>%
 dat2plot1a = DataIn1%>%
   filter(eventtype=="distractor") %>%
   group_by(colorlum, participant)%>%
-  summarise(
+  dplyr::summarise(
     FArate=(sum(response=='FA_proper')/n())*100,
     FArate_adj1 = ifelse((sum(response=='FA_proper')/n())>0,
                          min(c(sum(response=='FA_proper')/n(), 1-(.5/n()))),
@@ -597,9 +602,17 @@ dat2plot <- merge(dat2plot,dat2plot1a) %>% # adjust for HR and FR of 0 or 1
 
 dat2plot  %>%
   group_by(colorlum)%>%
-  summarise(N = n(), mean_RT = mean(RT_Mean), std_RT = sd(RT_Mean), mean_Hitrate = mean(Hitrate), std_Hitrate = sd(Hitrate),
-            mean_FArate = mean(FArate), std_FArate = sd(FArate), mean_dprime = mean(d_prime), std_dprime = sd(d_prime)) %>%
+  dplyr::summarise(N = n(), M_RT = mean(RT_Mean), SD_RT = sd(RT_Mean), M_HR = mean(Hitrate), SD_HR = sd(Hitrate),
+            M_FAR = mean(FArate), SD_FAR = sd(FArate), M_dprime = mean(d_prime), SD_dprime = sd(d_prime),
+            M_c = mean(c), SD_c = sd(c)) %>%
   kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3,3), caption = c("descriptives of behavioral measures")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+dat2plot  %>%
+  dplyr::summarise(N = n(), M_RT = mean(RT_Mean), SD_RT = sd(RT_Mean), M_HR = mean(Hitrate), SD_HR = sd(Hitrate),
+            M_FAR = mean(FArate), SD_FAR = sd(FArate), M_dprime = mean(d_prime), SD_dprime = sd(d_prime),
+            M_c = mean(c), SD_c = sd(c)) %>%
+  kable(escape = F, digits = c(4,4,4,4,4,4,4,4,4,4), caption = c("descriptives of behavioral measures")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 
 ```
@@ -616,7 +629,7 @@ num.iter = 10000
 
 dat2plot <- DATA_Trials %>%
   group_by(participant, colorlum)%>%
-  summarise(
+  dplyr::summarise(
     RT_Mean=mean(RT,na.rm=TRUE),
     RT_STD=sd(RT,na.rm=TRUE),
     Hitrate=(sum(response=='hit')/n())*100,
@@ -627,7 +640,7 @@ dat2plot <- DATA_Trials %>%
 dat2plot1a = DataIn1%>%
   filter(eventtype=="distractor") %>%
   group_by(participant, colorlum)%>%
-  summarise(
+  dplyr::summarise(
     FArate=(sum(response=='FA_proper')/n())*100,
     FArate_adj1 = ifelse((sum(response=='FA_proper')/n())>0,
                          min(c(sum(response=='FA_proper')/n(), 1-(.5/n()))),
@@ -710,13 +723,13 @@ num.iter = 10000
 
 dat2plot <- DATA_Trials %>%
   group_by(participant)%>%
-  summarise(RT_Mean=mean(RT,na.rm=TRUE),RT_STD=sd(RT,na.rm=TRUE),Hitrate=(sum(response=='hit')/n())*100)
+  dplyr::summarise(RT_Mean=mean(RT,na.rm=TRUE),RT_STD=sd(RT,na.rm=TRUE),Hitrate=(sum(response=='hit')/n())*100)
 
 dat2plot2 <- DataIn2 %>%
   mutate(`FA_all`= FA + `FA_proper`)%>%
   # dplyr::select(-FA)%>%
   dplyr::select(-FA_all)%>%
-  rename(participant=subject)
+  dplyr::rename(participant=subject)
 
 dat2plot_all <- merge(dat2plot,dat2plot2)
 
@@ -873,7 +886,7 @@ dat2plot_all %>%
     t_test_bf = map(data, ~ extractBF(ttestBF(formula = RT_Mean ~ colorlum, data = ., iterations = num.iter, rscale = sqrt(2)/2))),
     meanval = map(data, ~ .x %>%
                     group_by(colorlum) %>%
-                    summarise(
+                    dplyr::summarise(
                       mean_RT_Mean = mean(RT_Mean, na.rm = TRUE),
                       std_RT_Mean = sd(RT_Mean, na.rm = TRUE)
                     ) %>%
@@ -901,7 +914,7 @@ dat2plot_all %>%
                         bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
                         align = "center")
   ) %>%
-  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
         caption = c("RT | modulation by stimulus display group (isolum vs lum offset) | t-tests of difference")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 ```
@@ -915,11 +928,11 @@ dat2plot_all %>%
 dat2plot_all %>%
   nest() %>%
   mutate(
-    stats = map(data, ~ broom::tidy(t.test(Hitrate ~ colorlum, data = ., paired = FALSE))),
+    stats = map(data, ~ broom::tidy(t.test(Hitrate ~ colorlum, data = .))),
     t_test_bf = map(data, ~ extractBF(ttestBF(formula = Hitrate ~ colorlum, data = ., iterations = num.iter, rscale = sqrt(2)/2))),
     meanval = map(data, ~ .x %>%
                     group_by(colorlum) %>%
-                    summarise(
+                    dplyr::summarise(
                       mean_HR_Mean = mean(Hitrate, na.rm = TRUE),
                       std_HR_Mean = sd(Hitrate, na.rm = TRUE)
                     ) %>%
@@ -947,7 +960,7 @@ dat2plot_all %>%
                         bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
                         align = "center")
   ) %>%
-  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
         caption = c("Hitrate | modulation by stimulus display group (isolum vs lum offset) | t-tests of difference")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 ```
@@ -961,11 +974,11 @@ dat2plot_all %>%
 dat2plot_all %>%
   nest() %>%
   mutate(
-    stats = map(data, ~ broom::tidy(t.test(FA_proper_rate ~ colorlum, data = ., paired = FALSE))),
+    stats = map(data, ~ broom::tidy(t.test(FA_proper_rate ~ colorlum, data = .))),
     t_test_bf = map(data, ~ extractBF(ttestBF(formula = FA_proper_rate ~ colorlum, data = ., iterations = num.iter, rscale = sqrt(2)/2))),
     meanval = map(data, ~ .x %>%
                     group_by(colorlum) %>%
-                    summarise(
+                    dplyr::summarise(
                       mean_FAR_Mean = mean(FA_proper_rate, na.rm = TRUE),
                       std_FAR_Mean = sd(FA_proper_rate, na.rm = TRUE)
                     ) %>%
@@ -993,7 +1006,7 @@ dat2plot_all %>%
                         bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
                         align = "center")
   ) %>%
-  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
         caption = c("FA-rate | modulation by stimulus display group (isolum vs lum offset) | t-tests of difference")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 
@@ -1009,7 +1022,7 @@ dat2plot_all %>%
 dat2plot_all %>%
   nest() %>%
   mutate(
-    stats = map(data, ~ broom::tidy(t.test(d_prime ~ colorlum, data = ., paired = FALSE))),
+    stats = map(data, ~ broom::tidy(t.test(d_prime ~ colorlum, data = .))),
     t_test_bf = map(data, ~ extractBF(ttestBF(formula = d_prime ~ colorlum, data = ., iterations = num.iter, rscale = sqrt(2)/2))),
     meanval = map(data, ~ .x %>%
                     group_by(colorlum) %>%
@@ -1041,7 +1054,7 @@ dat2plot_all %>%
                         bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
                         align = "center")
   ) %>%
-  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
         caption = c("d-prime | modulation by stimulus display group (isolum vs lum offset) | t-tests of difference")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 ```
@@ -1055,7 +1068,7 @@ dat2plot_all %>%
 dat2plot_all %>%
   nest() %>%
   mutate(
-    stats = map(data, ~ broom::tidy(t.test(c ~ colorlum, data = ., paired = FALSE))),
+    stats = map(data, ~ broom::tidy(t.test(c ~ colorlum, data = .))),
     t_test_bf = map(data, ~ extractBF(ttestBF(formula = c ~ colorlum, data = ., iterations = num.iter, rscale = sqrt(2)/2))),
     meanval = map(data, ~ .x %>%
                     group_by(colorlum) %>%
@@ -1087,8 +1100,132 @@ dat2plot_all %>%
                         bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
                         align = "center")
   ) %>%
-  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
         caption = c("criterion | modulation by stimulus display group (isolum vs lum offset) | t-tests of difference")) %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+```
+
+
+## Statistical analysis
+
+### ANOVA models
+### linear mixed models
+
+#### test RT, Hitrate and dprime between different conditions
+
+**RT** ~ **conditions**
+
+<br> 
+
+```{r lme_RT_lum_con, fig.show = "hide", warning = FALSE, fig.height=4, fig.width=10}
+dat2plot <-  DataIn1%>%
+  # filter(eventtype=="target") %>%
+  mutate(condition2 = case_when(
+    condition %in% c(1,2) ~ "Att+Unatt",
+    condition %in% c(3,4) ~ "Att+Diff",
+    condition %in% c(5,6) ~ "Unatt+Diff"
+  )) %>%
+  filter(colorlum=="isolum__to_bckgrd")%>%
+  group_by(participant,condition2,eventtype)%>%
+  dplyr::summarise(
+    RT_Mean  = mean(RT, na.rm = TRUE),
+    RT_STD   = sd(RT, na.rm = TRUE),
+    Hitrate  = ifelse(first(eventtype) == "target",
+                      (sum(response == 'hit') / n()) * 100, NA),
+    FArate   = ifelse(first(eventtype) == "distractor",
+                      (sum(response == 'FA_proper') / n()) * 100, NA),
+    .groups = "drop"
+  )
+
+# RT
+dat2plot%>%
+  filter(eventtype=="target")%>%
+  aov_ez(id="participant", dv = "RT_Mean", data = ., within = c("condition2"),
+         include_aov = afex_options("include_aov")) %>%
+  anova()%>%
+  tidy() %>%
+   mutate(
+    `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
+                        color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
+                        bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
+                        align = "center")
+  ) %>%
+  dplyr::select(term, `num.Df`, `den.Df`, MSE, `statistic`, ges, `p.value`) %>%
+  dplyr::rename(F=statistic)%>%
+  kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), caption = c("ANOVARM  for RT")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+# RT ANOVA
+RTmodel <- dat2plot %>%
+  filter(eventtype=="target")%>%
+  mixed(
+    RT_Mean ~ condition2 + (1 | participant),
+    data = .,
+    method = "KR",  # Kenward-Roger approximation for p-values
+    return = "afex_aov",  # ensures compatibility with emmeans
+  )
+
+# compute generalized eta squared
+eta_tab <- effectsize::eta_squared(RTmodel, generalized = TRUE, partial = FALSE) %>%
+  as.data.frame() %>%
+  dplyr::select(Parameter, Eta2_partial)
+
+
+RTmodel %>%
+  anova()%>%
+  tidy()%>%
+  left_join(eta_tab, by = c("term" = "Parameter")) %>%
+  mutate(
+    `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
+                        color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
+                        bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
+                        align = "center")
+  ) %>%
+  dplyr::select(term, num.Df, den.Df, statistic, Eta2_partial, `p.value`) %>%
+  kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), 
+      caption = c("Mixed Model Anova Table (Type 3 tests, KR-method) | RT model")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+
+
+
+
+# HR
+dat2plot%>%
+  filter(eventtype=="target")%>%
+  aov_ez(id="participant", dv = "Hitrate", data = ., within = c("condition2"),
+         include_aov = afex_options("include_aov")) %>%
+  anova()%>%
+  tidy() %>%
+   mutate(
+    `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
+                        color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
+                        bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
+                        align = "center")
+  ) %>%
+  dplyr::select(term, `num.Df`, `den.Df`, MSE, `statistic`, ges, `p.value`) %>%
+  dplyr::rename(F=statistic)%>%
+  kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), caption = c("ANOVARM  for Hitrate")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+
+# FA rate
+dat2plot%>%
+  filter(eventtype=="distractor")%>%
+  aov_ez(id="participant", dv = "FArate", data = ., within = c("condition2"),
+         include_aov = afex_options("include_aov")) %>%
+  anova()%>%
+  tidy() %>%
+   mutate(
+    `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
+                        color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
+                        bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
+                        align = "center")
+  ) %>%
+  dplyr::select(term, `num.Df`, `den.Df`, MSE, `statistic`, ges, `p.value`) %>%
+  dplyr::rename(F=statistic)%>%
+  kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), caption = c("ANOVARM  for FA rate")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
 ```
 

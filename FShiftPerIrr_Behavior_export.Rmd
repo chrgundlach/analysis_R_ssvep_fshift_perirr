@@ -1,0 +1,165 @@
+---
+title: "behavioral analysis"
+author: "Christopher"
+date: "30 7 2024"
+output:
+  html_document:
+    code_folding: hide
+    toc: true
+    toc_float: true
+    toc_depth: 4
+    theme: flatly
+---
+
+
+
+```{r load_package, message = FALSE, warning = FALSE}
+library(lme4)
+library(readxl)
+library(tidyverse)
+library(data.table)
+library(tidyverse)
+library(afex)
+library(broom)
+library(apa)
+library(kableExtra)
+library(lmerTest)
+library(pbkrtest)
+library(effects)
+library(visreg)
+library(sjPlot)
+library(broom.mixed)
+library(pander)
+library(mediation)
+library(multcomp)
+library(multcompView)
+library(magrittr)
+library(multipanelfigure)
+library(ggbeeswarm)
+library(lsmeans)
+library(BayesFactor)
+library(ggpubr)
+library(gpairs)
+library(DescTools)
+library(cowplot)
+library(ggpol)
+library(psych)
+
+source('C:/Dropboxdata/Dropbox/work/R-statistics/general_functions/RainCloudPlots/tutorial_R/R_rainclouds.R')
+
+
+
+
+
+# broad cluster
+# CSD based normalized to pre-cue baseline in %
+# 
+DATAPath1 = "data_in/behavior_events.csv"
+DATAPath2 = "data_in/behavior_FAs.csv"
+
+
+
+
+
+options(scipen=1, digits=5)
+```
+<style type="text/css">
+.main-container {
+  max-width: 1800px !important;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+
+## Prepare data  
+<br>  
+
+1.  Read in data: 
+    + `r DATAPath1`
+    + `r DATAPath1`
+    
+<br>  
+
+```{r load_data,results = "hide", fig.show = "hide", warning = FALSE}
+# read in data
+DataIn1 <- read_csv(DATAPath1)
+DataIn2 <- read_csv(DATAPath2)
+head(DataIn1)
+str(DataIn1)
+head(DataIn2)
+str(DataIn2)
+
+```
+
+
+
+1.  Prepare new dataset(s)...
+<br>  
+
+```{r prepare_data1, results = "hide", fig.show = "hide", warning = FALSE}
+DATA_Trials <- DataIn1%>%
+  filter(eventtype=="target") %>%
+  mutate(condition2 = case_when(
+    condition %in% c(1,2) ~ "Att+Unatt",
+    condition %in% c(3,4) ~ "Att+Diff",
+    condition %in% c(5,6) ~ "Unatt+Diff"
+  ))
+
+
+```
+
+
+
+## Display behavioral data numerically
+
+<br>  
+
+```{r disp_data_avg, warning = FALSE}
+dat2plot <- DATA_Trials %>%
+  filter(colorlum %in% c("isolum__to_bckgrd")) %>%
+  group_by(colorlum, participant )%>%
+  dplyr::summarise(
+    RT_Mean=mean(RT,na.rm=TRUE),
+    RT_STD=sd(RT,na.rm=TRUE),
+    Hitrate=(sum(response=='hit')/n())*100,
+    Hitrate_adj1 = ifelse((sum(response=='hit')/n())>0,
+                         min(c(sum(response=='hit')/n(), 1-(.5/n()))),
+                         .5/n()), # according to Stanislaw H, Todorov N, Behav Res Meth (1999) 31, 137-149, "1/2N rule" or
+    Hitrate_adj2 = (sum(response=='hit')+0.5)/(n()+1)) # loglinear approach (Hautus, 1995)
+
+dat2plot1a = DataIn1%>%
+  filter(eventtype=="distractor") %>%
+  group_by(colorlum, participant)%>%
+  dplyr::summarise(
+    FArate=(sum(response=='FA_proper')/n())*100,
+    FArate_adj1 = ifelse((sum(response=='FA_proper')/n())>0,
+                         min(c(sum(response=='FA_proper')/n(), 1-(.5/n()))),
+                         .5/n()), # according to Stanislaw H, Todorov N, Behav Res Meth (1999) 31, 137-149, "1/2N rule" or
+    FArate_adj2 = (sum(response=='FA_proper')+0.5)/(n()+1)) # loglinear approach (Hautus, 1995))
+
+dat2plot <- merge(dat2plot,dat2plot1a) %>% # adjust for HR and FR of 0 or 1
+  mutate(
+    d_prime = qnorm(Hitrate_adj1)-qnorm(FArate_adj1),
+    c = -0.5*(qnorm(Hitrate_adj1)+qnorm(FArate_adj1))
+  )
+
+dat2plot  %>%
+  group_by(colorlum)%>%
+  dplyr::summarise(N = n(), mean_RT = mean(RT_Mean), std_RT = sd(RT_Mean), mean_Hitrate = mean(Hitrate), std_Hitrate = sd(Hitrate),
+            mean_FArate = mean(FArate), std_FArate = sd(FArate), mean_dprime = mean(d_prime), std_dprime = sd(d_prime)) %>%
+  kable(escape = F, digits = c(3,3,3,3,3,3,3,3,3,3), caption = c("descriptives of behavioral measures")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+```
+
+
+## Display behavioral data numerically
+
+<br>  
+
+```{r disp_data_avg, warning = FALSE}
+```
+
+
+

@@ -1,0 +1,1611 @@
+---
+title: "FFT_SSVEP_analysis"
+author: "Christopher"
+date: "2 7 2024"
+output:
+  html_document:
+    code_folding: hide
+    toc: true
+    toc_float: true
+    toc_depth: 4
+    theme: flatly
+---
+
+Modelling of ~~raw~~ [*CSD based*] amplitude values from fft-based data
+via linear mixed models
+via standard anova models
+
+```{r load_package, message = FALSE, warning = FALSE}
+rm(list=ls()) # clear environment
+library(lme4)
+library(readxl)
+library(tidyverse)
+library(data.table)
+library(tidyverse)
+library(afex)
+library(broom)
+library(apa)
+library(kableExtra)
+library(lmerTest)
+library(pbkrtest)
+library(effects)
+library(visreg)
+library(sjPlot)
+library(broom.mixed)
+library(pander)
+library(mediation)
+library(multcomp)
+library(multcompView)
+library(magrittr)
+library(multipanelfigure)
+library(ggbeeswarm)
+library(lsmeans)
+library(BayesFactor)
+library(ggpubr)
+library(gpairs)
+library(DescTools)
+library(cowplot)
+library(ggpol)
+library(logspline)
+
+library(brms)
+
+library(bayestestR)
+
+library(rstatix)
+library(ggtern)
+
+source('C:/Dropboxdata/Dropbox/work/R-statistics/general_functions/RainCloudPlots/tutorial_R/R_rainclouds.R')
+source('C:/Dropboxdata/Dropbox/work/R-statistics/general_functions/RainCloudPlots/tutorial_R/R_rainclouds.R')
+
+source('C:/Dropboxdata/Dropbox/work/R-statistics/examples/Bayesian_rank-based_hypothesis_testing/rankBasedCommonFunctions.R')
+source('C:/Dropboxdata/Dropbox/work/R-statistics/examples/Bayesian_rank-based_hypothesis_testing/rankSumSampler.R') # Wilcoxon rank sum function
+source('C:/Dropboxdata/Dropbox/work/R-statistics/examples/Bayesian_rank-based_hypothesis_testing/signRankSampler.R') # Wilcoxon signed-rank function
+source('C:/Dropboxdata/Dropbox/work/R-statistics/examples/Bayesian_rank-based_hypothesis_testing/spearmanSampler.R')# Spearman's rho function
+
+
+
+
+# broad cluster
+# CSD based normalized to pre-cue baseline in %
+#  
+DATAPath = "data_in/FFT_Amp_data_largeclust_06-14-2024_13-19.csv"
+t_baseline = c(-1000, 0)
+
+
+# broad cluster | smaller central cluster
+# CSD based normalized to pre-cue baseline in %
+#  
+# DATAPath = "data_in/FFT_Amp_data_largeclust_06-24-2024_15-43.csv"
+# t_baseline = c(-1000, 0)
+
+
+# broad cluster | smaller central cluster
+# CSD based normalized to pre-cue baseline in %
+# for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
+#  
+DATAPath = "data_in/FFT_Amp_data_largeclust_allsubs_08-30-2024_11-21.csv"
+t_baseline = c(-1000, 0)
+
+
+# broad cluster | larger central cluster |
+# peri: not correct!
+# CSD based normalized to pre-cue baseline in %
+# for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
+#  
+# DATAPath = "data_in/FFT_Amp_data_pericenter_allsubs_07-02-2024_11-46.csv"
+# t_baseline = c(-1000, 0)
+# 
+# broad cluster | very broad central cluster
+# CSD based normalized to pre-cue baseline in %
+# for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
+# # 
+# DATAPath = "data_in/FFT_Amp_data_largecenterclust_allsubs_09-11-2024_14-45.csv"
+# t_baseline = c(-1000, 0)
+
+
+
+#!!!!!!! relevant
+# broad cluster | larger central cluster as in Tango study | peri both clusters but smaller
+# CSD based normalized to pre-cue baseline in %
+# for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
+DATAPath = "data_in/FFT_Amp_data_CenterTangoStudyPeriSmall_05-23-2025_11-56.csv"
+t_baseline = c(-1000, 0)
+
+# broad cluster | larger central cluster as in Tango study | peri only center
+# DATAPath = "data_in/FFT_Amp_data_TangoStudyPeriOnlyCenter_11-25-2024_14-17.csv"
+# t_baseline = c(-1000, 0)
+
+# # broad cluster | larger central cluster as in Tango study | peri only lateral | in this study shows gain for attended
+# DATAPath = "data_in/FFT_Amp_data_TangoStudyPeriOnlyLateral_11-25-2024_14-17.csv"
+# t_baseline = c(-1000, 0)
+
+
+#!!!!!!!
+
+
+# replication relevant
+# broad cluster | larger central cluster as in Tango study | peri both clusters as in Tango study
+# CSD based normalized to pre-cue baseline in %
+# for changed experiment starting with participant 22: isoluminant stimuli and lower flicker frequencies
+# DATAPath = "data_in/FFT_Amp_data_TangoStudy_05-23-2025_11-53.csv"
+# t_baseline = c(-1000, 0)
+
+
+
+
+options(scipen=1, digits=7)
+```
+<style type="text/css">
+.main-container {
+max-width: 1800px !important;
+margin-left: auto;
+margin-right: auto;
+}
+</style>
+
+
+## Prepare data  
+<br>  
+
+1.  Read in data: 
++ `r DATAPath`
++ with pre-cue  [`r toString(t_baseline)`] ms
+
+<br>  
+
+```{r load_data,results = "hide", fig.show = "hide", warning = FALSE}
+sub_sample = c(0)
+# sub_sample = as.factor(c(26,30, 31,37, 38)) # no ssvep people discarded
+sub_sample = as.factor(c(42)) # low trial number
+
+
+# read in data
+DataIn <- read.csv(DATAPath, sep = ";") %>%
+  mutate(subjects = as.factor(subjects))%>%
+  filter(!subjects %in% sub_sample)
+head(DataIn)
+str(DataIn)
+```
+## Illustrate SSVEP Data
+
+### 1a  Illustrate Data as is | center RDKs
+
+
+plot differently
+
+<br>  
+
+```{r plot_data_st_center_2, results = "hide",  fig.height=5, fig.width=3.5, warning = FALSE}
+#evoked raw#### for center
+
+# set overall limits?
+dat2plot <- DataIn %>%
+  filter(RDK_position2=="center") %>%
+  group_by(subjects, time, RDK_isattended, RDK_colorlum)%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
+  filter(time=='[0.5 1.5] ')
+# set limits
+yax_limits <- c( min(dat2plot$modulation_evoked), max(dat2plot$modulation_evoked))
+yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
+yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.1
+
+
+dat2plot <- DataIn %>%
+  filter(RDK_position2=="center") %>%
+  group_by(subjects, time, RDK_isattended, RDK_colorlum)%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
+  filter(time=='[0.5 1.5] ', RDK_colorlum == 'offset_to_bckgrd')
+
+# set limits
+# yax_limits <- c( min(dat2plot$modulation_evoked), max(dat2plot$modulation_evoked))
+# yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
+# yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.2
+# # yax_limits <- c(-27, 15)
+
+theme_set(theme_bw())
+plot1 <- ggplot(dat2plot, aes(x = RDK_isattended, y = modulation_evoked, fill = RDK_isattended)) +
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_line(aes(group = interaction(subjects,time)),colour = "grey60",alpha = 1,size =0.5) +
+  geom_beeswarm(aes(color = RDK_isattended, x = RDK_isattended,
+                    group = RDK_isattended), cex=3, size = 5,alpha=1,fill="grey40",shape=21)+
+  # geom_point(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
+  #                   group = RDK_isattended), size = 4,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =RDK_isattended), geom='errorbar', width=0.9, size=1.5) +
+  scale_x_discrete("RDK_isattended", breaks=waiver(), labels = rep(c(""),1,2)) +
+  # theme(legend.position="bottom") +
+  ylab(expression(paste("amplitude modulation in %")))+
+  scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
+  scale_color_manual(values=c("steelblue2", "#F03F3F"))+
+  #  scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(legend.position="none")+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+plot2 <- ggplot(dat2plot, aes(y = modulation_evoked, fill = RDK_isattended, x = 1)) +
+  geom_flat_violin(aes(fill = RDK_isattended),position = position_nudge(x = .1, y = 0), 
+                   adjust = 1.3, trim = FALSE, alpha = 1, colour = NA)+
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  # scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
+  scale_color_manual(values=c("steelblue2", "#F03F3F"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+
+# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
+plotttitle <- ggdraw() + 
+  draw_label("SSVEP mod. | evoked \ncentral RDKs | luminance offset", fontface='bold', size = 10)
+plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
+
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3.5, height = 5, unit = "in")
+saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
+
+savefig %<>%
+  fill_panel(saveplot, column = 1, row = 1)
+savefig
+# save_multi_panel_figure(savefig, "figures/FFT_BeeSwarm_Mod_ALPHA_COL_34subs.eps")
+
+
+
+
+dat2plot <- DataIn %>%
+  filter(RDK_position2=="center") %>%
+  group_by(subjects, time, RDK_isattended, RDK_colorlum)%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
+  filter(time=='[0.5 1.5] ', RDK_colorlum == 'isolum__to_bckgrd')
+
+
+# set limits
+# yax_limits <- c( min(dat2plot$modulation_evoked), max(dat2plot$modulation_evoked))
+# yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
+# yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.2
+# # yax_limits <- c(-27, 15)
+
+theme_set(theme_bw())
+plot1 <- ggplot(dat2plot, aes(x = RDK_isattended, y = modulation_evoked, fill = RDK_isattended)) +
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_line(aes(group = interaction(subjects,time)),colour = "grey60",alpha = 1,size =0.5) +
+  geom_beeswarm(aes(color = RDK_isattended, x = RDK_isattended,
+                    group = RDK_isattended), cex=3, size = 5,alpha=1,fill="grey40",shape=21)+
+  # geom_point(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
+  #                   group = RDK_isattended), size = 4,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =RDK_isattended), geom='errorbar', width=0.9, size=1.5) +
+  scale_x_discrete("RDK_isattended", breaks=waiver(), labels = rep(c(""),1,2)) +
+  # theme(legend.position="bottom") +
+  ylab(expression(paste("amplitude modulation in %")))+
+  scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
+  scale_color_manual(values=c("steelblue2", "#F03F3F"))+
+  #  scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(legend.position="none")+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+plot2 <- ggplot(dat2plot, aes(y = modulation_evoked, fill = RDK_isattended, x = 1)) +
+  geom_flat_violin(aes(fill = RDK_isattended),position = position_nudge(x = .1, y = 0), 
+                   adjust = 1.3, trim = FALSE, alpha = 1, colour = NA)+
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  # scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
+  scale_color_manual(values=c("steelblue2", "#F03F3F"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+
+# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
+plotttitle <- ggdraw() + 
+  draw_label("SSVEP mod. | evoked \ncentral RDKs | isoluminant to background", fontface='bold', size = 10)
+plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
+
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3.5, height = 5, unit = "in")
+saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
+
+savefig %<>%
+  fill_panel(saveplot, column = 1, row = 1)
+savefig
+# save_multi_panel_figure(savefig, "figures/FFT_BeeSwarm_Mod_ALPHA_COL_34subs.eps")
+
+
+
+
+```
+
+
+### 2a  Illustrate Data as is | both subsets | general pre-to-post-cue modulation
+
+plot differently
+
+<br>  
+
+```{r plot_data_center_postcue, results = "hide",  fig.height=5, fig.width=3.5, warning = FALSE}
+#evoked raw#### for center
+
+# set overall limits?
+dat2plot <- DataIn %>%
+  filter(RDK_ispresented=="presented", RDK_position1=="center")%>%
+  group_by(subjects, time, RDK_colorlum)%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
+  filter(time == '[0.5 1.5] ')
+# set limits
+yax_limits <- c( min(dat2plot$modulation_evoked), max(dat2plot$modulation_evoked))
+yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
+yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.1
+
+
+
+
+theme_set(theme_bw())
+plot1 <- ggplot(dat2plot, aes(x = RDK_colorlum, y = modulation_evoked, fill = RDK_colorlum)) +
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  # geom_line(aes(group = interaction(subjects,time)),colour = "grey60",alpha = 1,size =0.5) +
+  geom_beeswarm(aes(color = RDK_colorlum, x = RDK_colorlum,
+                    group = RDK_colorlum), cex=3, size = 5,alpha=1,fill="grey60",shape=21)+
+  # geom_point(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
+  #                   group = RDK_isattended), size = 4,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =RDK_colorlum), geom='errorbar', width=0.9, size=1.5) +
+  scale_x_discrete("RDK position", breaks=waiver(), labels = rep(c(""),1,2)) +
+  # theme(legend.position="bottom") +
+  ylab(expression(paste("amplitude modulation in %")))+
+  scale_fill_manual(values=c("seagreen", "plum4"))+
+  scale_color_manual(values=c("seagreen", "plum4"))+
+  #  scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(legend.position="none")+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+plot2 <- ggplot(dat2plot, aes(y = modulation_evoked, fill = RDK_colorlum, x = 1)) +
+  geom_flat_violin(aes(fill = RDK_colorlum),position = position_nudge(x = .1, y = 0), 
+                   adjust = 1.3, trim = FALSE, alpha = 1, colour = NA)+
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  # scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  scale_fill_manual(values=c("seagreen", "plum4"))+
+  scale_color_manual(values=c("seagreen", "plum4"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+
+# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
+plotttitle <- ggdraw() + 
+  draw_label("SSVEP mod. | evoked \nacross cons | by stimuli brightness",
+             fontface='bold', size = 10)
+plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
+
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3.5, height = 5, unit = "in")
+saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
+
+savefig %<>%
+  fill_panel(saveplot, column = 1, row = 1)
+savefig
+# save_multi_panel_figure(savefig, "figures/FFT_BeeSwarm_Mod_ALPHA_COL_34subs.eps")
+```
+
+### 2b  Illustrate Data as is | both subsets | general pre-to-post-cue attentional selectivity
+
+plot differently
+
+<br>  
+
+```{r plot_data_center_postcue_att, results = "hide",  fig.height=3.5, fig.width=2.5, warning = FALSE}
+#evoked raw#### for center
+
+# set overall limits?
+dat2plot <- DataIn %>%
+  filter(RDK_ispresented=="presented", RDK_position1=="center")%>%
+  group_by(subjects, time, RDK_colorlum,RDK_isattended)%>%
+  summarise( modulation_evoked=mean(modulation_evoked))%>%
+  filter(time == '[0.5 1.5] ')%>%
+  pivot_wider(names_from = RDK_isattended, values_from = modulation_evoked) %>%
+  mutate(modulation_evoked = attended - `not attended`)
+# set limits
+yax_limits <- c( min(dat2plot$modulation_evoked), max(dat2plot$modulation_evoked))
+yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
+yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.1
+
+
+
+
+theme_set(theme_bw())
+plot1 <- ggplot(dat2plot, aes(x = RDK_colorlum, y = modulation_evoked, fill = RDK_colorlum)) +
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  # geom_line(aes(group = interaction(subjects,time)),colour = "grey60",alpha = 1,size =0.5) +
+  geom_beeswarm(aes(color = RDK_colorlum, x = RDK_colorlum,
+                    group = RDK_colorlum), cex=3, size = 5,alpha=1,fill="grey60",shape=21)+
+  # geom_point(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
+  #                   group = RDK_isattended), size = 4,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =RDK_colorlum), geom='errorbar', width=0.9, size=1.5) +
+  scale_x_discrete("RDK luminance", breaks=waiver(), labels = rep(c(""),1,2)) +
+  # theme(legend.position="bottom") +
+  ylab(expression(paste("amplitude modulation in %")))+
+  scale_fill_manual(values=c("seagreen", "plum4"), labels=c("iso", "offset"))+
+  scale_color_manual(values=c("seagreen", "plum4"), labels=c("iso", "offset"))+
+  #  scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(legend.position="none")+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+plot2 <- ggplot(dat2plot, aes(y = modulation_evoked, fill = RDK_colorlum, x = 1)) +
+  geom_flat_violin(aes(fill = RDK_colorlum),position = position_nudge(x = .1, y = 0), 
+                   adjust = 1.3, trim = FALSE, alpha = 1, colour = NA)+
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  # scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  scale_fill_manual(values=c("seagreen", "plum4"), labels=c("iso", "offset"))+
+  scale_color_manual(values=c("seagreen", "plum4"), labels=c("iso", "offset"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+
+# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
+plotttitle <- ggdraw() + 
+  draw_label("SSVEP mod. | evoked \natt. - unatt. | by stimuli brightness",
+             fontface='bold', size = 10)
+plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
+
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 2.5, height = 3.5, unit = "in")
+saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
+
+savefig %<>%
+  fill_panel(saveplot, column = 1, row = 1)
+savefig
+# save_multi_panel_figure(savefig, "figures/FFT_BeeSwarm_Mod_ALPHA_COL_34subs.eps")
+```
+
+### 2c  Direct comparison of pre-cue amplitudes for 26 Hz signal (present in both studies)
+
+
+<br>  
+
+```{r plot_data_center_pre_cue26Hz, results = "hide",  fig.height=3.5, fig.width=2.5, warning = FALSE}
+#evoked raw#### for center
+
+# set overall limits?
+dat2plot <- DataIn %>%
+  filter(
+    RDK_ispresented=="presented", 
+    RDK_position1=="center",
+    RDK_freq == 26,
+    time == '[-1 0] ')%>%
+  group_by(subjects, RDK_colorlum)%>%
+  summarise( amplitude_evoked=mean(amplitude_evoked))
+# set limits
+yax_limits <- c( 0, max(dat2plot$amplitude_evoked))
+yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
+yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.1
+
+
+
+
+theme_set(theme_bw())
+plot1 <- ggplot(dat2plot, aes(x = RDK_colorlum, y = amplitude_evoked, fill = RDK_colorlum)) +
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  # geom_line(aes(group = interaction(subjects,time)),colour = "grey60",alpha = 1,size =0.5) +
+  geom_beeswarm(aes(color = RDK_colorlum, x = RDK_colorlum,
+                    group = RDK_colorlum), cex=3, size = 5,alpha=1,fill="grey60",shape=21)+
+  # geom_point(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
+  #                   group = RDK_isattended), size = 4,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =RDK_colorlum), geom='errorbar', width=0.9, size=1.5) +
+  scale_x_discrete("RDK luminance", breaks=waiver(), labels = rep(c(""),1,2)) +
+  # theme(legend.position="bottom") +
+  ylab(expression(paste("amplitude in ", mu, "V/mm"^2)))+
+  scale_fill_manual(values=c("seagreen", "plum4"), labels=c("iso", "offset"))+
+  scale_color_manual(values=c("seagreen", "plum4"), labels=c("iso", "offset"))+
+  #  scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(legend.position="none")+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+plot2 <- ggplot(dat2plot, aes(y = amplitude_evoked, fill = RDK_colorlum, x = 1)) +
+  geom_flat_violin(aes(fill = RDK_colorlum),position = position_nudge(x = .1, y = 0), 
+                   adjust = 1.3, trim = FALSE, alpha = 1, colour = NA)+
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  # scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  scale_fill_manual(values=c("seagreen", "plum4"), labels=c("iso", "offset"))+
+  scale_color_manual(values=c("seagreen", "plum4"), labels=c("iso", "offset"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+
+# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
+plotttitle <- ggdraw() + 
+  draw_label("SSVEP amplitude. | evoked \npre-cue | by stimuli brightness",
+             fontface='bold', size = 10)
+plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
+
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 2.5, height = 3.5, unit = "in")
+saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
+
+savefig %<>%
+  fill_panel(saveplot, column = 1, row = 1)
+savefig
+# save_multi_panel_figure(savefig, "figures/FFT_BeeSwarm_Mod_ALPHA_COL_34subs.eps")
+```
+
+### 2d  Illustrate Data as is | both subsets | attention effects
+
+<br>  
+
+```{r plot_data_ERP_P300, results = "hide",  fig.height=5, fig.width=4, warning = FALSE}
+#evoked raw#### for center
+
+# set overall limits?
+dat2plot <- DataIn %>%
+  filter(RDK_ispresented=="presented", RDK_position1=="center")%>%
+  group_by(subjects, time, RDK_colorlum,RDK_isattended)%>%
+  summarise( modulation_evoked=mean(modulation_evoked))%>%
+  filter(time == '[0.5 1.5] ')
+# set limits
+yax_limits <- c( min(dat2plot$modulation_evoked), max(dat2plot$modulation_evoked))
+yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
+yax_limits <- yax_limits + c(-0.5, 4)*diff(yax_limits)*0.1
+
+
+
+theme_set(theme_bw())
+plot1 <- ggplot(dat2plot, aes(x = interaction(RDK_isattended,RDK_colorlum), y = modulation_evoked, fill = RDK_isattended)) +
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_line(aes(group = interaction(subjects,RDK_colorlum)),colour = "grey60",alpha = 1,size =0.5) +
+  geom_beeswarm(aes(color = RDK_isattended, x = interaction(RDK_isattended,RDK_colorlum),
+                    group = RDK_isattended), cex=2, size = 3,alpha=1,fill="grey60",shape=21)+
+  # geom_point(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
+  #                   group = RDK_isattended), size = 4,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =RDK_isattended), geom='errorbar', width=0.9, size=1.5) +
+  scale_x_discrete("LUMINANCE", breaks=waiver(), labels = c("iso","iso","offset","offset")) +
+  # theme(legend.position="bottom") +
+  # ylab(expression("amplitude in " * mu * "V/m²"))+
+  ylab(expression("modulation in %"))+
+  # scale_fill_manual(values=c("#005b8a", "#943826"))+
+  # scale_color_manual(values=c("#005b8a", "#943826"))+
+  # scale_fill_manual(values=c("seagreen", "plum4"))+
+  # scale_color_manual(values=c("seagreen", "plum4"))+
+  scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
+  scale_color_manual(values=c("steelblue2", "#F03F3F"))+
+  #  scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(legend.position="none")+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+plot2 <- ggplot(dat2plot, aes(y = modulation_evoked, fill = RDK_isattended, x = RDK_colorlum)) +
+  geom_flat_violin(aes(fill = RDK_isattended, width = 1.5),
+                   position = position_nudge(x = -0.2, y = 0), 
+                   adjust = 1, trim = FALSE, alpha = 1, colour = NA)+
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  # scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
+  scale_color_manual(values=c("steelblue2", "#F03F3F"))+
+  # scale_fill_manual(values=c("#005b8a", "#943826"))+
+  # scale_color_manual(values=c("#005b8a", "#943826"))+
+  # scale_fill_manual(values=c("seagreen", "plum4"))+
+  # scale_color_manual(values=c("seagreen", "plum4"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+  # theme(axis.title.x=element_blank(),
+  #       axis.text.x=element_blank(),
+  #       axis.ticks.x=element_blank())+
+  scale_x_discrete("LUMINANCE", breaks=waiver(), labels = c("iso","offset")) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+
+# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
+plotttitle <- ggdraw() + 
+  draw_label("SSVEP modulations", fontface='bold', size = 10)
+plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
+
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 4, height = 5, unit = "in")
+saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
+
+savefig %<>%
+  fill_panel(saveplot, column = 1, row = 1)
+savefig
+
+# save_multi_panel_figure(savefig, "figures/FFT_AttMod_2studies.eps")
+
+
+
+
+
+```
+
+
+## Statistical analysis
+
+
+
+### Central Stimuli
+
+#### analysis I
+
+**modulation** ~ **COLOR ATTENTION** x **COLOR LUMINANCE**
+
+- mixed design
+- t-test post-cue modulation against zero for attended and unattended color
+- t-test difference of post-cue modulation for attended vs unattended color
+
+<br> 
+
+```{r Stat central stimuli analysisI, message=FALSE, warning=FALSE, include=TRUE, fig.height=4, fig.width=4.5}
+dat2plot <- DataIn %>%
+  filter(RDK_position2=="center") %>%
+  group_by(subjects, time, RDK_isattended, RDK_colorlum)%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
+  filter(time == '[0.5 1.5] ')%>%
+  ungroup
+
+aovmodel1 <- dat2plot%>%
+  aov_ez(id="subjects", dv = "modulation_evoked", data = ., within = c("RDK_isattended"), between = c("RDK_colorlum"),
+         include_aov = afex_options("include_aov"))
+
+
+# display table anova effects
+aovmodel1 %>%
+  anova()%>%
+  tidy()%>%
+  mutate(
+    `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
+                        color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
+                        bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
+                        align = "center")
+  ) %>%
+  dplyr::select(term, `num.Df`, `den.Df`, MSE, `statistic`, ges, `p.value`) %>%
+  dplyr::rename(F=statistic)%>%
+  kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), caption = c("repeated measures ANOVA for central post-cue modulations")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+
+#display interaction
+emm_ATTXLum <- as.data.frame(emmeans(aovmodel1, ~ RDK_isattended*RDK_colorlum))
+
+# RDK_isattended plot
+ggplot(emm_ATTXLum, aes(x = RDK_colorlum, y = emmean, fill = RDK_isattended)) +
+  geom_col(position = position_dodge(), width = 0.6) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), 
+                position = position_dodge(width = 0.6),
+                width = 0.2) +
+  labs(title = "Interaction: Attention × Luminance",
+       y = "Estimated Marginal Means (95% CI)", x = "Color Luminance") +
+  theme_minimal()+
+  scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
+  scale_color_manual(values=c("steelblue2", "#F03F3F"))
+
+
+#create emmeans object/grid
+post_hocs.emmean <- emmeans(aovmodel1, c("RDK_isattended","RDK_colorlum")) # adjust = holm
+
+# report data for post_hocs.RDK_isattended
+post_hocs.emmean %>%
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+      caption = c("estimated marginal means | by ATTENTION X LUMINANCE | dv = central SSVEP modulation")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+post_hocs.emmean %>%
+contrast(method = "identity",adjust = "FDR")%>%
+summary() %>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "left")
+  ) %>%
+  # mutate(CohensD = `t.ratio`/sqrt(df+1))%>%
+  mutate(`CohensD` =
+           summary(eff_size(contrast(post_hocs.emmean,method = "identity",adjust = "FDR"),
+                            sigma = sqrt(mean(sigma(aovmodel1$lm)^2)), # RMS of sigma()
+                            edf = df.residual(aovmodel1$lm), method = "identity"))$effect.size,
+         `lowCI` =
+           summary(eff_size(contrast(post_hocs.emmean,method = "identity",adjust = "FDR"),
+                            sigma = sqrt(mean(sigma(aovmodel1$lm)^2)), # RMS of sigma()
+                            edf = df.residual(aovmodel1$lm), method = "identity"))$lower.CL,
+         `highCI` =
+           summary(eff_size(contrast(post_hocs.emmean,method = "identity",adjust = "FDR"),
+                            sigma = sqrt(mean(sigma(aovmodel1$lm)^2)), # RMS of sigma()
+                            edf = df.residual(aovmodel1$lm), method = "identity"))$upper.CL
+  )%>%
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+        caption = c("estimated marginal means | by ATTENTION X LUMINANCE | dv = central SSVEP modulation | corrected: FDR")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+# planned comparison
+# test by specifying the levels levels(post_hocs.emmean) as.data.frame(post_hocs.emmean)
+list.contrasts <- list(
+  "iso att vs unatt"=c(1, -1, 0, 0),
+  "offset att vs unatt"=c(0, 0, 1, -1),
+  "att iso vs offset"=c(1,0,-1,0),
+  "unatt iso vs offset"=c(0, 1, 0, -1)
+)
+
+
+
+post_hocs.emmean %>%
+  contrast(method = list.contrasts,adjust = "FDR") %>%
+  summary() %>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "left")
+  ) %>%
+  # mutate(CohensD = `t.ratio`/sqrt(df+1))%>%
+  mutate(`CohensD` =
+           summary(eff_size(contrast(post_hocs.emmean, method = list.contrasts,adjust = "FDR"),
+                            sigma = sqrt(mean(sigma(aovmodel1$lm)^2)), # RMS of sigma()
+                            edf = df.residual(aovmodel1$lm), method = "identity"))$effect.size,
+         `lowCI` =
+           summary(eff_size(contrast(post_hocs.emmean, method = list.contrasts,adjust = "FDR"),
+                            sigma = sqrt(mean(sigma(aovmodel1$lm)^2)), # RMS of sigma()
+                            edf = df.residual(aovmodel1$lm), method = "identity"))$lower.CL,
+         `highCI` =
+           summary(eff_size(contrast(post_hocs.emmean, method = list.contrasts,adjust = "FDR"),
+                            sigma = sqrt(mean(sigma(aovmodel1$lm)^2)), # RMS of sigma()
+                            edf = df.residual(aovmodel1$lm), method = "identity"))$upper.CL
+  )%>%
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+        caption = c("estimated contrasts | by ATTENTION X LUMINANCE | dv = central SSVEP modulation | corrected: FDR")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+```
+
+
+
+
+#### analysis II
+
+**modulation** ~ **COLOR ATTENTION**
+
+conventional analysis with anova and post-hoc t-tests implemented manually
+
+- t-test post-cue modulation against zero for attended and unattended color
+- t-test difference of post-cue modulation for attended vs unattended color
+
+<br> 
+
+```{r Stat central stimuli analysisII, message=FALSE, warning=FALSE, include=TRUE}
+dat2plot <- DataIn %>%
+  filter(RDK_position2=="center") %>%
+  group_by(subjects, time, RDK_isattended, RDK_colorlum)%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
+  filter(time == '[0.5 1.5] ')
+
+
+aovmodel1 <- dat2plot%>%
+  aov_ez(id="subjects", dv = "modulation_evoked", data = ., within = c("RDK_isattended"), between = c("RDK_colorlum"),
+         include_aov = afex_options("include_aov"))
+
+
+# display table anova effects
+aovmodel1 %>%
+  anova()%>%
+  tidy()%>%
+  mutate(
+    `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
+                        color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
+                        bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
+                        align = "center")
+  ) %>%
+  dplyr::select(term, `num.Df`, `den.Df`, MSE, `statistic`, ges, `p.value`) %>%
+  dplyr::rename(F=statistic)%>%
+  kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), caption = c("Mixed effects ANOVA model for central post-cue modulations")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+
+dat2plot %>%
+  group_by(RDK_isattended, RDK_colorlum)%>%
+  nest()%>%
+  mutate(stats = map(data, ~broom::tidy(
+    t.test(modulation_evoked ~ 1, data = .)
+  ))) %>%
+  mutate(
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$modulation_evoked, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
+  )%>%
+  mutate(meanval = map(data, ~ mean(.x$modulation_evoked))) %>%
+  mutate(std = map(data, ~ sd(.x$modulation_evoked))) %>%
+  dplyr::select(-data) %>%
+  unnest(cols = c(stats, t_test_bf, meanval, std))%>%
+  mutate(BF10 = bf, BF01 = 1/bf)%>%
+  dplyr::select(RDK_colorlum, RDK_isattended, meanval, std,  statistic, parameter, p.value, BF10, BF01)%>%
+  ungroup()%>%
+  # group_by(RDK_colorlum)%>%
+  mutate(p.value = p.adjust(p.value, method="fdr")) %>% # none, holm
+  # mutate(p.value = p.adjust(p.value, method="none")) %>% # none, holm
+  ungroup()%>%
+  mutate(CohensD = `statistic`/sqrt(parameter +1))%>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "center")
+  ) %>%
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+        caption = c("central SSVEP | modulation | t-tests for modulation agains zero | FDR-corrected")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+
+
+dat2plot %>%
+  dplyr::select(-amplitude_evoked)%>%
+  pivot_wider(names_from = "RDK_isattended", values_from = "modulation_evoked")%>%
+  mutate(attendedMINUSunattended = `attended` -`not attended`)%>%
+  group_by(time, RDK_colorlum)%>%
+  nest()%>%
+  mutate(stats = map(data, ~broom::tidy(
+    t.test(attendedMINUSunattended ~ 1, data = .)
+  ))) %>%
+  mutate(
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$attendedMINUSunattended, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
+  )%>%
+  mutate(meanval = map(data, ~ mean(.x$attendedMINUSunattended))) %>%
+  mutate(std = map(data, ~ sd(.x$attendedMINUSunattended))) %>%
+  ungroup()%>%
+  dplyr::select(-data, -time) %>%
+  unnest(cols = c(stats, t_test_bf, meanval, std))%>%
+  mutate(BF10 = bf, BF01 = 1/bf)%>%
+  dplyr::select(RDK_colorlum, meanval, std,  statistic, parameter, p.value, BF10, BF01)%>%
+  ungroup()%>%
+  mutate(p.value = p.adjust(p.value, method="fdr")) %>% # none, holm
+  # mutate(p.value = p.adjust(p.value, method="none")) %>% # none, holm
+  ungroup()%>%
+  mutate(CohensD = `statistic`/sqrt(parameter +1))%>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "center")
+  ) %>%
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("central SSVEP | modulation | attended - unattended ")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+```
+
+#### analysis IIc
+
+**modulation** ~ **COLOR ATTENTION**
+
+control analysis for 26 Hz signal only
+conventional analysis with anova and post-hoc t-tests implemented manually
+
+- t-test post-cue modulation against zero for attended and unattended color
+- t-test difference of post-cue modulation for attended vs unattended color
+
+<br> 
+
+```{r Stat central stimuli analysisII control 26Hz, message=FALSE, warning=FALSE, include=TRUE}
+dat2plot <- DataIn %>%
+  filter(RDK_position2=="center", RDK_freq==26) %>%
+  group_by(subjects, time, RDK_isattended, RDK_colorlum)%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
+  filter(time == '[0.5 1.5] ')
+
+
+aovmodel1 <- dat2plot%>%
+  aov_ez(id="subjects", dv = "modulation_evoked", data = ., within = c("RDK_isattended"), between = c("RDK_colorlum"),
+         include_aov = afex_options("include_aov"))
+
+
+# display table anova effects
+aovmodel1 %>%
+  anova()%>%
+  tidy()%>%
+  mutate(
+    `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
+                        color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
+                        bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
+                        align = "center")
+  ) %>%
+  dplyr::select(term, `num.Df`, `den.Df`, MSE, `statistic`, ges, `p.value`) %>%
+  dplyr::rename(F=statistic)%>%
+  kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), caption = c("Mixed effects ANOVA model for central post-cue modulations 26 Hz only")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+
+dat2plot %>%
+  group_by(RDK_isattended, RDK_colorlum)%>%
+  nest()%>%
+  mutate(stats = map(data, ~broom::tidy(
+    t.test(modulation_evoked ~ 1, data = .)
+  ))) %>%
+  mutate(
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$modulation_evoked, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
+  )%>%
+  mutate(meanval = map(data, ~ mean(.x$modulation_evoked))) %>%
+  mutate(std = map(data, ~ sd(.x$modulation_evoked))) %>%
+  dplyr::select(-data) %>%
+  unnest(cols = c(stats, t_test_bf, meanval, std))%>%
+  mutate(BF10 = bf, BF01 = 1/bf)%>%
+  dplyr::select(RDK_colorlum, RDK_isattended, meanval, std,  statistic, parameter, p.value, BF10, BF01)%>%
+  ungroup()%>%
+  # group_by(RDK_colorlum)%>%
+  mutate(p.value = p.adjust(p.value, method="fdr")) %>% # none, holm
+  # mutate(p.value = p.adjust(p.value, method="none")) %>% # none, holm
+  ungroup()%>%
+  mutate(CohensD = `statistic`/sqrt(parameter +1))%>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "center")
+  ) %>%
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+        caption = c("central SSVEP 26 Hz only | modulation | t-tests for modulation agains zero | FDR-corrected")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+
+
+dat2plot %>%
+  dplyr::select(-amplitude_evoked)%>%
+  pivot_wider(names_from = "RDK_isattended", values_from = "modulation_evoked")%>%
+  mutate(attendedMINUSunattended = `attended` -`not attended`)%>%
+  group_by(time, RDK_colorlum)%>%
+  nest()%>%
+  mutate(stats = map(data, ~broom::tidy(
+    t.test(attendedMINUSunattended ~ 1, data = .)
+  ))) %>%
+  mutate(
+    t_test_bf = map(data, ~{extractBF(ttestBF(x = .$attendedMINUSunattended, data = .,iterations=num.iter,rscale = sqrt(2)/2))})
+  )%>%
+  mutate(meanval = map(data, ~ mean(.x$attendedMINUSunattended))) %>%
+  mutate(std = map(data, ~ sd(.x$attendedMINUSunattended))) %>%
+  ungroup()%>%
+  dplyr::select(-data, -time) %>%
+  unnest(cols = c(stats, t_test_bf, meanval, std))%>%
+  mutate(BF10 = bf, BF01 = 1/bf)%>%
+  dplyr::select(RDK_colorlum, meanval, std,  statistic, parameter, p.value, BF10, BF01)%>%
+  ungroup()%>%
+  mutate(p.value = p.adjust(p.value, method="fdr")) %>% # none, holm
+  # mutate(p.value = p.adjust(p.value, method="none")) %>% # none, holm
+  ungroup()%>%
+  mutate(CohensD = `statistic`/sqrt(parameter +1))%>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "center")
+  ) %>%
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("central SSVEP 26 Hz only | modulation | attended - unattended ")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+```
+
+#### analysis III
+
+**PRE-CUE AMP** ~ **COLOR LUMINANCE**
+
+- t-test of pre-cue 26 Hz amplitudes between isoluminat colors and colors with offset
+
+<br> 
+
+```{r Stat central stimuli analysisIII, message=FALSE, warning=FALSE, include=TRUE}
+dat2plot <- DataIn %>%
+  filter(
+    RDK_ispresented=="presented", 
+    RDK_position1=="center",
+    RDK_freq == 26,
+    time == '[-1 0] ')%>%
+  group_by(subjects, RDK_colorlum)%>%
+  summarise( amplitude_evoked=mean(amplitude_evoked))
+
+dat2plot %>%
+  ungroup()%>%
+  nest() %>%
+  mutate(
+    stats = map(data, ~ broom::tidy(t.test(amplitude_evoked ~ RDK_colorlum, data = .))),
+    t_test_bf = map(data, ~ extractBF(ttestBF(formula = amplitude_evoked ~ RDK_colorlum, 
+                                              data = ., iterations = num.iter, rscale = sqrt(2)/2))),
+    meanval = map(data, ~ .x %>%
+                    group_by(RDK_colorlum) %>%
+                    summarise(
+                      mean_AMP_Mean = mean(amplitude_evoked, na.rm = TRUE),
+                      std_AMP_Mean = sd(amplitude_evoked, na.rm = TRUE)
+                    ) %>%
+                    pivot_wider(names_from = RDK_colorlum,
+                                values_from = c(mean_AMP_Mean, std_AMP_Mean),
+                                names_sep = "_")
+    ),
+    cohens_d = map(data, ~ rstatix::cohens_d(amplitude_evoked ~ RDK_colorlum, data = ., paired = FALSE))
+  ) %>%
+  unnest(cols = c(stats, cohens_d, t_test_bf, meanval))%>%
+  mutate(BF10 = bf, BF01 = 1/bf, 
+         M_AMP_iso = mean_AMP_Mean_isolum__to_bckgrd,
+         SD_AMP_iso = std_AMP_Mean_isolum__to_bckgrd,
+         M_AMP_off = mean_AMP_Mean_offset_to_bckgrd,
+         SD_AMP_off = std_AMP_Mean_offset_to_bckgrd,
+         diff=estimate,
+         CohensD = effsize, t.value=statistic, df = parameter)%>%
+  dplyr::select(M_AMP_iso, SD_AMP_iso, M_AMP_off, SD_AMP_off, diff, t.value, df, p.value, CohensD, BF10, BF01)%>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "center")
+  ) %>%
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("central SSVEP | amplitude | pre-cue ")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+```
+
+#### analysis IV
+
+**modulation** ~ **COLOR ATTENTION**
+
+Bayesian analysis via brms to allow inclusion of Bayes Factor estimation for mixed models
+
+```{r Stat central stimuli analysisIV, message=FALSE, warning=FALSE, include=TRUE}
+dat2plot <- DataIn %>%
+  filter(RDK_position2=="center") %>%
+  group_by(subjects, time, RDK_isattended, RDK_colorlum)%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
+  filter(time == '[0.5 1.5] ')
+
+
+
+# Fit the model
+# (1 | subjects) accounts for the random intercept per subject
+bayesian_model <- brm(
+  formula = modulation_evoked ~ RDK_isattended * RDK_colorlum + (1 | subjects), 
+  data = dat2plot,
+  family = gaussian(),
+  prior = set_prior("normal(0, 20)", class = "b"), # Optional: set your priors
+  # prior = set_prior("cauchy(0, 0.707)", class = "b"), # medium prior
+  chains = 4, iter = 2000, core = 4,
+  file = "fit_full_slog.rds",
+  save_pars = save_pars(all = TRUE),
+  file_refit = "on_change",
+  # file_refit = "always",
+  # file_refit = "never",
+)
+
+# (2 | subjects) fit the prior model only
+bayesian_prior_model <- brm(
+  formula = modulation_evoked ~ RDK_isattended * RDK_colorlum + (1 | subjects), 
+  data = dat2plot,
+  family = gaussian(),
+  prior = set_prior("normal(0, 20)", class = "b"), # Optional: set your priors
+  # prior = set_prior("cauchy(0, 0.707)", class = "b"), # medium prior
+  chains = 4, iter = 2000, core = 4,
+  file = "fit_full_prior_slog.rds",
+  save_pars = save_pars(all = TRUE),
+  file_refit = "on_change",
+  # file_refit = "always",
+  # file_refit = "never",
+  sample_prior = "only" # This ignores your actual DV values
+)
+
+# (3 | subjects) fit the null model only
+bayesian_null_model <- brm(
+  formula = modulation_evoked ~ 1 + (1 | subjects), 
+  data = dat2plot,
+  family = gaussian(),
+  prior = set_prior("normal(0, 20)", class = "Intercept"), # Optional: set your priors
+  # prior = set_prior("cauchy(0, 0.707)", class = "b"), # medium prior
+  chains = 4, iter = 2000, core = 4,
+  file = "fit_null_slog.rds",
+  save_pars = save_pars(all = TRUE),
+  file_refit = "on_change",
+  # file_refit = "always",
+  # file_refit = "never",
+)
+
+
+# report results for some designed contrasts
+# create emmmgrid
+bayesian_emm <- emmeans(bayesian_model, ~ RDK_isattended * RDK_colorlum)
+
+# defined contrasts
+list.contrasts <- list(
+  "iso att vs unatt"=c(1, -1, 0, 0),
+  "offset att vs unatt"=c(0, 0, 1, -1),
+  "att iso vs offset"=c(1,0,-1,0),
+  "unatt iso vs offset"=c(0, 1, 0, -1)
+)
+
+# compute contrasts
+bayesian_contrasts<-bayesian_emm %>%
+  contrast(method = list.contrasts)
+
+bayesian_contrasts %>%
+  summary() %>%
+    kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+        caption = c("estimated contrasts | by ATTENTION X LUMINANCE | dv = central SSVEP modulation | BRMs framework")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+
+# no calculate Bayes factors for these contrasts
+# Force the calculation to look at the samples
+prior_model <- unupdate(bayesian_model)
+prior_emm <- emmeans(prior_model, ~ RDK_isattended * RDK_colorlum)
+prior_emm_contrasts <- prior_emm %>%
+  contrast(method = list.contrasts)
+
+bayesian_contrasts_BF <- bayesfactor_parameters(bayesian_contrasts, prior = prior_emm_contrasts)
+
+bayesian_contrasts_BF%>%
+  as.data.frame() %>%
+  mutate(BF10 = exp(log_BF), BF01 = 1/exp(log_BF)) %>%
+  # Optional: Round to 2 decimal places unless it's very small
+  mutate(BF10 = ifelse(BF10 > 1000, formatC(BF10, format = "e", digits = 3), round(BF10, 3))) %>%
+  mutate(BF01 = ifelse(BF01 > 1000, formatC(BF01, format = "e", digits = 3), round(BF01, 3))) %>%
+  dplyr::select(contrast, BF10, BF01, -log_BF)%>%
+    kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), 
+        caption = c("estimated contrasts | by ATTENTION X LUMINANCE | dv = central SSVEP modulation | BRMs framework")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+
+
+
+```
+
+#### analysis V
+
+**CENTRAL PRE-CUE AMP** ~ **PRESENCE IN PERIPHERY**
+
+Do we see differences in pre-cue SSVEP amplitudes depending on whether the stimulus of the same color was present in the periphery?
+
+```{r Stat central stimuli analysisV, message=FALSE, warning=FALSE, include=TRUE,  fig.height=3.5, fig.width=4.5,}
+dat2plot <- DataIn %>%
+  filter(time == '[-1 0] ') %>%
+  group_by(subjects, condition) %>%
+  mutate(
+    color_in_periphery = case_when(
+      RDK_id == "RDK1" &
+        any(RDK_id == "RDK3" & RDK_ispresented == "presented") ~ "color_present",
+
+      RDK_id == "RDK1" ~ "color_absent",
+
+      RDK_id == "RDK2" &
+        any(RDK_id == "RDK4" & RDK_ispresented == "presented") ~ "color_present",
+
+      RDK_id == "RDK2" ~ "color_absent",
+
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  ungroup() %>%
+  # dplyr::select(-presented_RDK3, -presented_RDK4)%>%
+  filter(RDK_position1=="center")%>%
+  group_by(subjects,RDK_colorlum, color_in_periphery)%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked))
+
+
+
+
+# plot it
+# set overall limits?
+# set limits
+yax_limits <- c( min(dat2plot$amplitude_evoked), max(dat2plot$amplitude_evoked))
+yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
+yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.1
+
+
+
+
+theme_set(theme_bw())
+plot1 <- dat2plot %>%
+  filter(RDK_colorlum=="offset_to_bckgrd")%>%
+  ggplot(., aes(x = color_in_periphery, y = amplitude_evoked, fill = color_in_periphery)) +
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_line(aes(group = interaction(subjects)),colour = "grey60",alpha = 1,size =0.5) +
+  geom_beeswarm(aes(color = color_in_periphery, x = color_in_periphery,
+                    group = color_in_periphery), cex=3, size = 4,alpha=1,fill="grey60",shape=21)+
+  # geom_point(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
+  #                   group = RDK_isattended), size = 4,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =color_in_periphery), geom='errorbar', width=0.9, size=1.5) +
+  scale_x_discrete("RDK luminance", breaks=waiver(), labels = rep(c(""),1,2)) +
+  # theme(legend.position="bottom") +
+  ylab(expression(paste("amplitude modulation in %")))+
+  scale_fill_manual(values=c("seagreen", "plum4"))+
+  scale_color_manual(values=c("seagreen", "plum4"))+
+  #  scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(legend.position="none")+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+plot2 <- dat2plot %>%
+  filter(RDK_colorlum=="offset_to_bckgrd")%>%
+  ggplot(., aes(y = amplitude_evoked, fill = color_in_periphery, x = 1)) +
+  geom_flat_violin(aes(fill = color_in_periphery),position = position_nudge(x = .1, y = 0), 
+                   adjust = 1.3, trim = FALSE, alpha = 1, colour = NA)+
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  # scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  scale_fill_manual(values=c("seagreen", "plum4"))+
+  scale_color_manual(values=c("seagreen", "plum4"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+plot3 <- dat2plot %>%
+  filter(RDK_colorlum!="offset_to_bckgrd")%>%
+  ggplot(., aes(x = color_in_periphery, y = amplitude_evoked, fill = color_in_periphery)) +
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_line(aes(group = interaction(subjects)),colour = "grey60",alpha = 1,size =0.5) +
+  geom_beeswarm(aes(color = color_in_periphery, x = color_in_periphery,
+                    group = color_in_periphery), cex=3, size = 4,alpha=1,fill="grey60",shape=21)+
+  # geom_point(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
+  #                   group = RDK_isattended), size = 4,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =color_in_periphery), geom='errorbar', width=0.9, size=1.5) +
+  scale_x_discrete("RDK luminance", breaks=waiver(), labels = rep(c(""),1,2)) +
+  # theme(legend.position="bottom") +
+  ylab(expression(paste("amplitude modulation in %")))+
+  scale_fill_manual(values=c("seagreen", "plum4"))+
+  scale_color_manual(values=c("seagreen", "plum4"))+
+  #  scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(legend.position="none")+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+plot4 <- dat2plot %>%
+  filter(RDK_colorlum!="offset_to_bckgrd")%>%
+  ggplot(., aes(y = amplitude_evoked, fill = color_in_periphery, x = 1)) +
+  geom_flat_violin(aes(fill = color_in_periphery),position = position_nudge(x = .1, y = 0), 
+                   adjust = 1.3, trim = FALSE, alpha = 1, colour = NA)+
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  # scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  scale_fill_manual(values=c("seagreen", "plum4"))+
+  scale_color_manual(values=c("seagreen", "plum4"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+
+# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
+plotttitle <- ggdraw() + 
+  draw_label("SSVEP amplitude. | evoked \nleft: offset; right: isoluminant",
+             fontface='bold', size = 10)
+plotplots <- ggarrange(plot1, plot2,plot3, plot4,ncol = 4,common.legend = TRUE,align = "h", widths=c(3,1,3,1))
+
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 4.5, height = 3.5, unit = "in")
+saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
+
+savefig %<>%
+  fill_panel(saveplot, column = 1, row = 1)
+savefig
+# save_multi_panel_figure(savefig, "figures/FFT_BeeSwarm_Mod_ALPHA_COL_34subs.eps")
+
+
+# statistical test
+dat2plot %>%
+  ungroup()%>%
+  group_by(RDK_colorlum)%>%
+  nest() %>%
+    mutate(
+    stats = map(data, ~ rstatix::t_test(amplitude_evoked ~ color_in_periphery, data = ., paired = TRUE, detailed = TRUE)),
+    t_test_bf = map(data, ~ extractBF(ttestBF(formula = amplitude_evoked ~ color_in_periphery, 
+                                              data = ., iterations = num.iter, rscale = sqrt(2)/2))),
+    meanval = map(data, ~ .x %>%
+                    group_by(color_in_periphery) %>%
+                    summarise(
+                      mean_AMP_Mean = mean(amplitude_evoked, na.rm = TRUE),
+                      std_AMP_Mean = sd(amplitude_evoked, na.rm = TRUE)
+                    ) %>%
+                    pivot_wider(names_from = color_in_periphery,
+                                values_from = c(mean_AMP_Mean, std_AMP_Mean),
+                                names_sep = "_")
+    ),
+    cohens_d = map(data, ~ rstatix::cohens_d(amplitude_evoked ~ color_in_periphery, data = ., paired = FALSE))
+  ) %>%
+  unnest(cols = c(stats, t_test_bf, meanval))%>%
+  mutate(CohensD = `statistic`/sqrt(df +1))%>%
+  mutate(BF10 = bf, BF01 = 1/bf, 
+         M_AMP_abs = mean_AMP_Mean_color_absent,
+         SD_AMP_abs = std_AMP_Mean_color_absent,
+         M_AMP_pres = mean_AMP_Mean_color_present,
+         SD_AMP_pres = std_AMP_Mean_color_present,
+         diff=estimate,
+         t.value=statistic,p.value=p)%>%
+  dplyr::select(M_AMP_abs, SD_AMP_abs, M_AMP_pres, SD_AMP_pres, diff, t.value, df, p.value, CohensD, BF10, BF01)%>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "center")
+  ) %>%
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("central SSVEP | amplitude | pre-cue ")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+```
+
+#### analysis VI
+
+**CENTRAL POST-CUE MOD** ~ **PRESENCE IN PERIPHERY**
+
+Do we see differences in post-cue SSVEP modulations depending on whether the stimulus of the same color was present in the periphery?
+
+```{r Stat central stimuli analysisVI, message=FALSE, warning=FALSE, include=TRUE,  fig.height=3.5, fig.width=4.5,}
+dat2plot <- DataIn %>%
+  filter(time == '[0.5 1.5] ') %>%
+  group_by(subjects, condition) %>%
+  mutate(
+    color_in_periphery = case_when(
+      RDK_id == "RDK1" &
+        any(RDK_id == "RDK3" & RDK_ispresented == "presented") ~ "color_present",
+
+      RDK_id == "RDK1" ~ "color_absent",
+
+      RDK_id == "RDK2" &
+        any(RDK_id == "RDK4" & RDK_ispresented == "presented") ~ "color_present",
+
+      RDK_id == "RDK2" ~ "color_absent",
+
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  ungroup() %>%
+  # dplyr::select(-presented_RDK3, -presented_RDK4)%>%
+  filter(RDK_position1=="center" & RDK_isattended =="attended")%>%
+  group_by(subjects,RDK_colorlum, color_in_periphery)%>%
+  summarise(modulation_evoked=mean(modulation_evoked))
+
+
+
+
+# plot it
+# set overall limits?
+# set limits
+yax_limits <- c( min(dat2plot$modulation_evoked), max(dat2plot$modulation_evoked))
+yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
+yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.1
+
+
+
+
+theme_set(theme_bw())
+plot1 <- dat2plot %>%
+  filter(RDK_colorlum=="offset_to_bckgrd")%>%
+  ggplot(., aes(x = color_in_periphery, y = modulation_evoked, fill = color_in_periphery)) +
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_line(aes(group = interaction(subjects)),colour = "grey60",alpha = 1,size =0.5) +
+  geom_beeswarm(aes(color = color_in_periphery, x = color_in_periphery,
+                    group = color_in_periphery), cex=3, size = 4,alpha=1,fill="grey60",shape=21)+
+  # geom_point(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
+  #                   group = RDK_isattended), size = 4,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =color_in_periphery), geom='errorbar', width=0.9, size=1.5) +
+  scale_x_discrete("RDK luminance", breaks=waiver(), labels = rep(c(""),1,2)) +
+  # theme(legend.position="bottom") +
+  ylab(expression(paste("amplitude modulation in %")))+
+  scale_fill_manual(values=c("seagreen", "plum4"))+
+  scale_color_manual(values=c("seagreen", "plum4"))+
+  #  scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(legend.position="none")+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+plot2 <- dat2plot %>%
+  filter(RDK_colorlum=="offset_to_bckgrd")%>%
+  ggplot(., aes(y = modulation_evoked, fill = color_in_periphery, x = 1)) +
+  geom_flat_violin(aes(fill = color_in_periphery),position = position_nudge(x = .1, y = 0), 
+                   adjust = 1.3, trim = FALSE, alpha = 1, colour = NA)+
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  # scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  scale_fill_manual(values=c("seagreen", "plum4"))+
+  scale_color_manual(values=c("seagreen", "plum4"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+plot3 <- dat2plot %>%
+  filter(RDK_colorlum!="offset_to_bckgrd")%>%
+  ggplot(., aes(x = color_in_periphery, y = modulation_evoked, fill = color_in_periphery)) +
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  geom_line(aes(group = interaction(subjects)),colour = "grey60",alpha = 1,size =0.5) +
+  geom_beeswarm(aes(color = color_in_periphery, x = color_in_periphery,
+                    group = color_in_periphery), cex=3, size = 4,alpha=1,fill="grey60",shape=21)+
+  # geom_point(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
+  #                   group = RDK_isattended), size = 4,alpha=0.4)+
+  stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =color_in_periphery), geom='errorbar', width=0.9, size=1.5) +
+  scale_x_discrete("RDK luminance", breaks=waiver(), labels = rep(c(""),1,2)) +
+  # theme(legend.position="bottom") +
+  ylab(expression(paste("amplitude modulation in %")))+
+  scale_fill_manual(values=c("seagreen", "plum4"))+
+  scale_color_manual(values=c("seagreen", "plum4"))+
+  #  scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(legend.position="none")+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+plot4 <- dat2plot %>%
+  filter(RDK_colorlum!="offset_to_bckgrd")%>%
+  ggplot(., aes(y = modulation_evoked, fill = color_in_periphery, x = 1)) +
+  geom_flat_violin(aes(fill = color_in_periphery),position = position_nudge(x = .1, y = 0), 
+                   adjust = 1.3, trim = FALSE, alpha = 1, colour = NA)+
+  geom_hline(yintercept=0, show.legend = FALSE) +
+  # scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
+  # scale_color_manual(values=c("#193A3D", "#F03F3F"))+
+  scale_fill_manual(values=c("seagreen", "plum4"))+
+  scale_color_manual(values=c("seagreen", "plum4"))+
+  # scale_fill_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  # scale_y_continuous(limits=c(-60, 140))
+  scale_y_continuous(limits=yax_limits)
+
+
+
+# cowplot::plot_grid(plot1, plot2, plot3, ncol = 3,labels = "AUTO")
+plotttitle <- ggdraw() + 
+  draw_label("SSVEP amplitude modulation for attended color | evoked \nleft: offset; right: isoluminant",
+             fontface='bold', size = 10)
+plotplots <- ggarrange(plot1, plot2,plot3, plot4,ncol = 4,common.legend = TRUE,align = "h", widths=c(3,1,3,1))
+
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 4.5, height = 3.5, unit = "in")
+saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
+
+savefig %<>%
+  fill_panel(saveplot, column = 1, row = 1)
+savefig
+# save_multi_panel_figure(savefig, "figures/FFT_BeeSwarm_Mod_ALPHA_COL_34subs.eps")
+
+
+# statistical test
+dat2plot %>%
+  ungroup()%>%
+  group_by(RDK_colorlum)%>%
+  nest() %>%
+    mutate(
+    stats = map(data, ~ rstatix::t_test(modulation_evoked ~ color_in_periphery, data = ., paired = TRUE, detailed = TRUE)),
+    t_test_bf = map(data, ~ extractBF(ttestBF(formula = modulation_evoked ~ color_in_periphery, 
+                                              data = ., iterations = num.iter, rscale = sqrt(2)/2))),
+    meanval = map(data, ~ .x %>%
+                    group_by(color_in_periphery) %>%
+                    summarise(
+                      mean_AMP_Mean = mean(modulation_evoked, na.rm = TRUE),
+                      std_AMP_Mean = sd(modulation_evoked, na.rm = TRUE)
+                    ) %>%
+                    pivot_wider(names_from = color_in_periphery,
+                                values_from = c(mean_AMP_Mean, std_AMP_Mean),
+                                names_sep = "_")
+    ),
+    cohens_d = map(data, ~ rstatix::cohens_d(modulation_evoked ~ color_in_periphery, data = ., paired = FALSE))
+  ) %>%
+  unnest(cols = c(stats, t_test_bf, meanval))%>%
+  mutate(CohensD = `statistic`/sqrt(df +1))%>%
+  mutate(BF10 = bf, BF01 = 1/bf, 
+         M_AMP_abs = mean_AMP_Mean_color_absent,
+         SD_AMP_abs = std_AMP_Mean_color_absent,
+         M_AMP_pres = mean_AMP_Mean_color_present,
+         SD_AMP_pres = std_AMP_Mean_color_present,
+         diff=estimate,
+         t.value=statistic,p.value=p)%>%
+  dplyr::select(M_AMP_abs, SD_AMP_abs, M_AMP_pres, SD_AMP_pres, diff, t.value, df, p.value, CohensD, BF10, BF01)%>%
+  mutate(
+    p.value = cell_spec(ifelse(round(p.value,4)<.001,"< .001",round(p.value,4)), 
+                        color = ifelse(is.nan(p.value),"blue", ifelse(p.value < .05, "green", "red")),
+                        bold = ifelse(is.nan(p.value),F, ifelse(p.value < .05, T,F)),
+                        align = "center")
+  ) %>%
+  kbl(escape = F, digits = c(3,3,3,3,3,3,3,3,3), caption = c("central SSVEP | amplitude | pre-cue ")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+```
+
+
+

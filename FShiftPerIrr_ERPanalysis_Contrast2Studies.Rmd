@@ -102,11 +102,28 @@ DataIn <- DATAPath %>%
 ```
 ## Illustrate ERP Data
 
+### 0  Count trial number
+
+<br>  
+
+```{r trialnumber, results = "hide",  fig.height=5, fig.width=5.5, warning = FALSE}
+DataIn %>%
+  ungroup() %>%
+  group_by(luminance, eventtype)%>%
+  dplyr::summarise(M = mean(trialnum), SD = sd(trialnum)) %>%
+  kbl(escape = F, digits = c(2,2,2,2), caption = c("number of trials per condition")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+  
+```
+
+
+## Illustrate ERP Data
+
 ### 1  Illustrate Data as is | eventy by eventtype | N2 ERP
 
 <br>  
 
-```{r plot_data_ERP_N2, results = "hide",  fig.height=5, fig.width=5.5, warning = FALSE}
+```{r plot_data_ERP_N2, results = "hide",  fig.height=3, fig.width=3, warning = FALSE}
 #evoked raw#### for center
 
 # set overall limits?
@@ -124,7 +141,7 @@ plot1 <- ggplot(dat2plot, aes(x = interaction(eventtype,luminance), y = amplitud
   geom_hline(yintercept=0, show.legend = FALSE) +
   geom_line(aes(group = interaction(participant,luminance)),colour = "grey60",alpha = 1,size =0.5) +
   geom_beeswarm(aes(color = eventtype, x = interaction(eventtype,luminance),
-                    group = eventtype), cex=2, size = 5,alpha=1,fill="grey60",shape=21)+
+                    group = eventtype), cex=2, size = 3,alpha=1,fill="grey60",shape=21)+
   # geom_point(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
   #                   group = RDK_isattended), size = 4,alpha=0.4)+
   stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =eventtype), geom='errorbar', width=0.9, size=1.5) +
@@ -147,8 +164,8 @@ plot1 <- ggplot(dat2plot, aes(x = interaction(eventtype,luminance), y = amplitud
 
 
 plot2 <- ggplot(dat2plot, aes(y = amplitude, fill = eventtype, x = luminance)) +
-  geom_flat_violin(aes(fill = eventtype),
-                   position = position_nudge(x = 0, y = 0), 
+  geom_flat_violin(aes(fill = eventtype, width = 1.5),
+                   position = position_nudge(x = -0.2, y = 0), 
                    adjust = 1, trim = FALSE, alpha = 1, colour = NA)+
   geom_hline(yintercept=0, show.legend = FALSE) +
   # scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
@@ -179,7 +196,7 @@ plotttitle <- ggdraw() +
   draw_label("ERP amps for N2", fontface='bold', size = 10)
 plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
 
-savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 5.5, height = 5, unit = "in")
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3, height = 3, unit = "in")
 saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
 
 savefig %<>%
@@ -192,13 +209,13 @@ savefig
 
 
 ```
-## Illustrate ERP Data
+
 
 ### 2  Illustrate Data as is | eventy by eventtype | P300 ERP
 
 <br>  
 
-```{r plot_data_ERP_P300, results = "hide",  fig.height=5, fig.width=5.5, warning = FALSE}
+```{r plot_data_ERP_P300, results = "hide",  fig.height=3, fig.width=3, warning = FALSE}
 #evoked raw#### for center
 
 # set overall limits?
@@ -216,7 +233,7 @@ plot1 <- ggplot(dat2plot, aes(x = interaction(eventtype,luminance), y = amplitud
   geom_hline(yintercept=0, show.legend = FALSE) +
   geom_line(aes(group = interaction(participant,luminance)),colour = "grey60",alpha = 1,size =0.5) +
   geom_beeswarm(aes(color = eventtype, x = interaction(eventtype,luminance),
-                    group = eventtype), cex=2, size = 5,alpha=1,fill="grey60",shape=21)+
+                    group = eventtype), cex=2, size = 3,alpha=1,fill="grey60",shape=21)+
   # geom_point(aes(color = RDK_isattended, x = interaction(time,RDK_isattended),
   #                   group = RDK_isattended), size = 4,alpha=0.4)+
   stat_summary(fun.y=mean, aes(ymin=..y.., ymax=..y.., color =eventtype), geom='errorbar', width=0.9, size=1.5) +
@@ -239,8 +256,8 @@ plot1 <- ggplot(dat2plot, aes(x = interaction(eventtype,luminance), y = amplitud
 
 
 plot2 <- ggplot(dat2plot, aes(y = amplitude, fill = eventtype, x = luminance)) +
-  geom_flat_violin(aes(fill = eventtype),
-                   position = position_nudge(x = 0, y = 0), 
+  geom_flat_violin(aes(fill = eventtype, width = 1.5),
+                   position = position_nudge(x = -0.2, y = 0), 
                    adjust = 1, trim = FALSE, alpha = 1, colour = NA)+
   geom_hline(yintercept=0, show.legend = FALSE) +
   # scale_fill_manual(values=c("#193A3D", "#F03F3F"))+
@@ -271,7 +288,7 @@ plotttitle <- ggdraw() +
   draw_label("ERP amps for P300", fontface='bold', size = 10)
 plotplots <- ggarrange(plot1, plot2,ncol = 2,common.legend = TRUE,align = "h", widths=c(3,1))
 
-savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 5.5, height = 5, unit = "in")
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 3, height = 3, unit = "in")
 saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
 
 savefig %<>%
@@ -286,7 +303,7 @@ savefig
 ```
 
 
-## Statistical analysis
+## Statistical analysis - EMMEANS
 
 
 
@@ -498,5 +515,6 @@ post_hocs.emmean %>%
 #         caption = c("estimated contrasts | by ATTENTION X LUMINANCE | dv = central SSVEP modulation | corrected: FDR")) %>%
 #   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 ```
+
 
 
