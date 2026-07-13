@@ -610,7 +610,7 @@ dat2plot <- DataIn %>%
 # set limits
 yax_limits <- c( min(dat2plot$modulation_evoked), max(dat2plot$modulation_evoked))
 yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
-yax_limits <- yax_limits + c(-0.5, 4)*diff(yax_limits)*0.1
+yax_limits <- yax_limits + c(-0, 2)*diff(yax_limits)*0.1
 
 
 

@@ -62,6 +62,8 @@ source('C:/Dropboxdata/Dropbox/work/R-statistics/examples/Bayesian_rank-based_hy
 # multiple ERP files
 DATAPath = c("data_in/ERP_N2_ParietemporalLateral_230to380ms.csv",
               "data_in/ERP_P300_centroparietal_450to650ms.csv")
+DATAPath = c("data_in/ERP_N2_ParietemporalLateral_230to430ms.csv",
+              "data_in/ERP_P300_centroparietal_450to650ms.csv")
 
 
 
@@ -132,7 +134,7 @@ dat2plot <- DataIn %>%
 # set limits
 yax_limits <- c( min(dat2plot$amplitude), max(dat2plot$amplitude))
 yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
-yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.1
+yax_limits <- rev(yax_limits + c(-3.5, 1)*diff(yax_limits)*0.1)
 
 
 
@@ -160,7 +162,7 @@ plot1 <- ggplot(dat2plot, aes(x = interaction(eventtype,luminance), y = amplitud
   # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
   theme(legend.position="none")+
   # scale_y_continuous(limits=c(-60, 140))
-  scale_y_continuous(limits=yax_limits)
+  scale_y_continuous(limits=yax_limits, transform = "reverse")
 
 
 plot2 <- ggplot(dat2plot, aes(y = amplitude, fill = eventtype, x = luminance)) +
@@ -187,7 +189,7 @@ plot2 <- ggplot(dat2plot, aes(y = amplitude, fill = eventtype, x = luminance)) +
   scale_x_discrete("eventtype", breaks=waiver(), labels = c("iso","offset")) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   # scale_y_continuous(limits=c(-60, 140))
-  scale_y_continuous(limits=yax_limits)
+  scale_y_continuous(limits=rev(yax_limits), transform = "reverse")
 
 
 
@@ -202,7 +204,7 @@ saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
 savefig %<>%
   fill_panel(saveplot, column = 1, row = 1)
 savefig
-# save_multi_panel_figure(savefig, "figures/FFT_BeeSwarm_Mod_ALPHA_COL_34subs.eps")
+# save_multi_panel_figure(savefig, "figures/ERP_N2.eps")
 
 
 
@@ -224,7 +226,7 @@ dat2plot <- DataIn %>%
 # set limits
 yax_limits <- c( min(dat2plot$amplitude), max(dat2plot$amplitude))
 yax_limits <- round(yax_limits + c(-1, 1)*diff(yax_limits)*0.1)
-yax_limits <- yax_limits + c(-1, 1)*diff(yax_limits)*0.1
+yax_limits <- yax_limits + c(-3, 1)*diff(yax_limits)*0.1
 
 
 
@@ -252,7 +254,7 @@ plot1 <- ggplot(dat2plot, aes(x = interaction(eventtype,luminance), y = amplitud
   # scale_color_manual(values=c(rgb2hex(0.0, 153.0, 204.0),rgb2hex(0.0, 77, 102.0)))+
   theme(legend.position="none")+
   # scale_y_continuous(limits=c(-60, 140))
-  scale_y_continuous(limits=yax_limits)
+  scale_y_continuous(limits=yax_limits, transform = "reverse")
 
 
 plot2 <- ggplot(dat2plot, aes(y = amplitude, fill = eventtype, x = luminance)) +
@@ -279,7 +281,7 @@ plot2 <- ggplot(dat2plot, aes(y = amplitude, fill = eventtype, x = luminance)) +
   scale_x_discrete("eventtype", breaks=waiver(), labels = c("iso","offset")) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   # scale_y_continuous(limits=c(-60, 140))
-  scale_y_continuous(limits=yax_limits)
+  scale_y_continuous(limits=yax_limits, transform = "reverse")
 
 
 
@@ -294,7 +296,7 @@ saveplot <- ggarrange(plotttitle, plotplots, nrow = 2, heights=c(0.2, 1))
 savefig %<>%
   fill_panel(saveplot, column = 1, row = 1)
 savefig
-# save_multi_panel_figure(savefig, "figures/FFT_BeeSwarm_Mod_ALPHA_COL_34subs.eps")
+# save_multi_panel_figure(savefig, "figures/ERP_P300.eps")
 
 
 
