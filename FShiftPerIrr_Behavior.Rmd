@@ -1111,7 +1111,7 @@ dat2plot_all %>%
 ### ANOVA models
 ### linear mixed models
 
-#### test RT, Hitrate and dprime between different conditions
+#### test RT, Hitrate and dprime between different conditions of stimuli in periphery
 
 **RT** ~ **conditions**
 

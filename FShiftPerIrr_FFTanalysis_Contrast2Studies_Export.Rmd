@@ -1607,5 +1607,72 @@ dat2plot %>%
   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 ```
 
+#### analysis VII
+
+**CENTRAL POST-CUE MOD** ~ **LUMINANCE**
+
+Do we see general post-cue modulations (irrespective of ATTENTION)?
+
+```{r Stat central stimuli analysisVII, message=FALSE, warning=FALSE, include=TRUE,  fig.height=3, fig.width=4.5,}
+dat2plot <- DataIn %>%
+  filter(RDK_ispresented=="presented", RDK_position1=="center")%>%
+  group_by(subjects, time, RDK_freq, RDK_colorlum,RDK_isattended)%>%
+  summarise(amplitude_evoked=mean(amplitude_evoked), modulation_evoked=mean(modulation_evoked))%>%
+  filter(time != '[1 2] ')
+
+
+lmmmodel1 <- dat2plot%>%
+  mixed(
+    amplitude_evoked ~ RDK_isattended * time * RDK_colorlum + (1 | RDK_freq:subjects), # different intecepts modelled for  freq by sub combinations
+    data = .,
+    method = "KR",  # Kenward-Roger approximation for p-values
+    return = "afex_aov"  # ensures compatibility with emmeans
+  )
+
+# display table anova effects
+lmmmodel1 %>%
+  anova()%>%
+  tidy()%>%
+  mutate(
+    `p.value` = cell_spec(ifelse(round(`p.value`,4)<.001,"< .001",round(`p.value`,4)), 
+                        color = ifelse(is.nan(`p.value`),"blue", ifelse(`p.value` < .05, "green", "red")),
+                        bold = ifelse(is.nan(`p.value`),F, ifelse(`p.value` < .05, T,F)),
+                        align = "center")
+  ) %>%
+  dplyr::select(term, `num.Df`, `den.Df`, `statistic`, `p.value`) %>%
+  kbl(escape = F, digits = c(5,5,5,5,5,5,5,5,5), 
+      caption = c("Mixed Model Anova Table (Type 3 tests, KR-method) | central SSVEP pre-cue amplitudes (normalized by mean amplitudes)")) %>%
+  kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
+
+#display main effects via emmeans
+# Main effect of RDK_isattended
+emm_TIMEXLUM_lmm <- as.data.frame(emmeans(lmmmodel1, ~ time * RDK_colorlum))
+
+# RDK_isattended plot
+# add some more range to the y axis to allow for some more space for error bars and contrasts
+y_range <- range(c(emm_TIMEXLUM_lmm$lower.CL, emm_TIMEXLUM_lmm$upper.CL))
+y_range <- c(0, max(c(emm_TIMEXLUM_lmm$lower.CL, emm_TIMEXLUM_lmm$upper.CL)))
+y_extension <- diff(y_range) * 0.20
+
+saveplot <- ggplot(emm_TIMEXLUM_lmm, aes(x = time, y = emmean, fill = RDK_colorlum)) +
+  geom_col(position = position_dodge(), width = 0.6) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.6, position = position_dodge()) +
+  labs(title = "non-sign. Interaction TIME X LUMINANCE",
+       y = "Estimated Marginal Means (95% CI)", x = "time windows in s") +
+  theme_light() +
+  scale_fill_manual(values=c("steelblue2", "#F03F3F"))+
+  scale_color_manual(values=c("steelblue2", "#F03F3F"))+
+  scale_y_continuous(limits = c(y_range[1], y_range[2] + y_extension))
+  # theme(axis.text.x = element_blank())
+
+savefig <- multi_panel_figure(columns = 1, rows = 1, panel_label_type = "none", width = 4.5, height = 3, unit = "in")
+savefig %<>%
+  fill_panel(saveplot, column = 1, row = 1)
+savefig
+# save_multi_panel_figure(savefig, "figures/FFT_Center_MargMeans_ATTENTION.eps")
+
+
+```
+
 
 

@@ -518,5 +518,64 @@ post_hocs.emmean %>%
 #   kable_styling("striped", full_width = T, bootstrap_options = c("striped", "hover", "condensed", "responsive",font_size = 8))
 ```
 
+### ERP correlations
 
+do differences between target/distractor N2 correlate with P3 differences?
+
+<br> 
+
+```{r Stat_N2, message=FALSE, warning=FALSE, include=TRUE, fig.height=4, fig.width=4.5}
+def.cormethod ="pearson"
+# def.cormethod ="spearman"
+num.iter = 10000
+
+# high luminance experiment
+dat2plot <- DataIn %>%
+  dplyr::select(-time_window, -electrodes, -trialnum)%>%
+  pivot_wider(names_from = c("erpcomponent","eventtype"), values_from = "amplitude") %>%
+  mutate("N2diff" = N2_target- N2_distractor, "P300diff" = P300_target- P300_distractor)%>%
+  filter(luminance=="offset_to_bckgrd")
+
+corrRho1 = SpearmanRho(x = dat2plot$N2diff, y = dat2plot$P300diff, conf.level = .95)
+cbf1 = correlationBF(dat2plot$N2diff, dat2plot$P300diff, rscale = "medium",iterations=num.iter)
+plot1<-ggscatter(dat2plot, x = "N2diff", y = "P300diff", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = def.cormethod, size = 3, alpha = 0.6,
+          add.params = list(fill = "lightgray"),
+          ggtheme = theme_classic(),
+          xlab = "N2", ylab = "P300",
+          title = sprintf("Rho: %1.3f CI[%1.3f %1.3f]; BF10: %1.3f",corrRho1[[1]],corrRho1[[2]],corrRho1[[3]],extractBF(cbf1)[[1]]))+
+  font("title", size = 8)
+
+
+
+plotttitle <- ggdraw() + draw_label("Spearman Rank Correlations\nhigh luminance experiment", fontface='bold', size=12)
+ggarrange(plotttitle, plot1,nrow = 2, heights=c(0.2, 1))
+
+# isoluminance experiment
+dat2plot <- DataIn %>%
+  dplyr::select(-time_window, -electrodes, -trialnum)%>%
+  pivot_wider(names_from = c("erpcomponent","eventtype"), values_from = "amplitude") %>%
+  mutate("N2diff" = N2_target- N2_distractor, "P300diff" = P300_target- P300_distractor)%>%
+  filter(luminance=="isolum__to_bckgrd")
+
+corrRho1 = SpearmanRho(x = dat2plot$N2diff, y = dat2plot$P300diff, conf.level = .95)
+cbf1 = correlationBF(dat2plot$N2diff, dat2plot$P300diff, rscale = "medium",iterations=num.iter)
+plot1<-ggscatter(dat2plot, x = "N2diff", y = "P300diff", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = def.cormethod, size = 3, alpha = 0.6,
+          add.params = list(fill = "lightgray"),
+          ggtheme = theme_classic(),
+          xlab = "N2", ylab = "P300",
+          title = sprintf("Rho: %1.3f CI[%1.3f %1.3f]; BF10: %1.3f",corrRho1[[1]],corrRho1[[2]],corrRho1[[3]],extractBF(cbf1)[[1]]))+
+  font("title", size = 8)
+
+
+
+plotttitle <- ggdraw() + draw_label("Spearman Rank Correlations\nisoluminance experiment", fontface='bold', size=12)
+ggarrange(plotttitle, plot1,nrow = 2, heights=c(0.2, 1))
+
+
+
+```
 

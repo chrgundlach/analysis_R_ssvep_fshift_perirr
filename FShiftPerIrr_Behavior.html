@@ -2525,6 +2525,91 @@ offset_to_bckgrd
 </tr>
 </tbody>
 </table>
+<pre class="r"><code>dat2plot  %&gt;%
+  dplyr::summarise(N = n(), M_RT = mean(RT_Mean), SD_RT = sd(RT_Mean), M_HR = mean(Hitrate), SD_HR = sd(Hitrate),
+            M_FAR = mean(FArate), SD_FAR = sd(FArate), M_dprime = mean(d_prime), SD_dprime = sd(d_prime),
+            M_c = mean(c), SD_c = sd(c)) %&gt;%
+  kable(escape = F, digits = c(4,4,4,4,4,4,4,4,4,4), caption = c(&quot;descriptives of behavioral measures&quot;)) %&gt;%
+  kable_styling(&quot;striped&quot;, full_width = T, bootstrap_options = c(&quot;striped&quot;, &quot;hover&quot;, &quot;condensed&quot;, &quot;responsive&quot;,font_size = 8))</code></pre>
+<table class="table table-striped table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
+<caption>
+descriptives of behavioral measures
+</caption>
+<thead>
+<tr>
+<th style="text-align:right;">
+N
+</th>
+<th style="text-align:right;">
+M_RT
+</th>
+<th style="text-align:right;">
+SD_RT
+</th>
+<th style="text-align:right;">
+M_HR
+</th>
+<th style="text-align:right;">
+SD_HR
+</th>
+<th style="text-align:right;">
+M_FAR
+</th>
+<th style="text-align:right;">
+SD_FAR
+</th>
+<th style="text-align:right;">
+M_dprime
+</th>
+<th style="text-align:right;">
+SD_dprime
+</th>
+<th style="text-align:right;">
+M_c
+</th>
+<th style="text-align:right;">
+SD_c
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right;">
+50
+</td>
+<td style="text-align:right;">
+595.48
+</td>
+<td style="text-align:right;">
+50.497
+</td>
+<td style="text-align:right;">
+86.74
+</td>
+<td style="text-align:right;">
+11.6
+</td>
+<td style="text-align:right;">
+16.406
+</td>
+<td style="text-align:right;">
+10.794
+</td>
+<td style="text-align:right;">
+2.3471
+</td>
+<td style="text-align:right;">
+0.7742
+</td>
+<td style="text-align:right;">
+-0.0859
+</td>
+<td style="text-align:right;">
+0.3275
+</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div id="correlation-between-behavioral-data" class="section level2">
 <h2>Correlation between behavioral data</h2>
